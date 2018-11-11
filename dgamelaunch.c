@@ -5,18 +5,18 @@
  * Brett Carrington <brettcar@segvio.org>,
  * Jilles Tjoelker <jilles@stack.nl>
  *
- * This program is free software; you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License as published by 
- * the Free Software Foundation; either version 2 of the License, or 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- * GNU General Public License for more details. 
- * 
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
@@ -37,7 +37,7 @@
 
 /* a request from the author: please leave some remnance of
  * 'based on dgamelaunch version xxx' in any derivative works, or
- * even keep the line the same altogether. I'm probably happy 
+ * even keep the line the same altogether. I'm probably happy
  * to make any changes you need. */
 
 /* ************************************************************* */
@@ -1559,20 +1559,15 @@ changepw (int dowrite)
 
       drawbanner (&banner);
 
-      mvprintw (5, 1,
-                "Please enter a%s password. Remember that this is sent over the net",
-                loggedin ? " new" : "");
-      mvaddstr (6, 1,
-                "in plaintext, so make it something new and expect it to be relatively");
-      mvaddstr (7, 1, "insecure.");
-      mvprintw (8, 1,
-                "%i character max. No ':' characters. Blank line to abort.", DGL_PASSWDLEN);
-      mvaddstr (10, 1, "=> ");
+      mvprintw (5, 1, "Please enter a%s password of up to %i characters.",
+		loggedin ? " new" : "", DGL_PASSWDLEN);
+      mvaddstr (6, 1, "Blank line to abort.");
+      mvaddstr (8, 1, "=> ");
 
       if (error == 1)
         {
-          mvaddstr (15, 1, "Sorry, the passwords don't match. Try again.");
-          move (10, 4);
+          mvaddstr (13, 1, "Sorry, the passwords don't match. Try again.");
+          move (8, 4);
         }
 
       refresh ();
@@ -1583,13 +1578,8 @@ changepw (int dowrite)
       if (*buf == '\0')
         return 0;
 
-      if (strchr (buf, ':') != NULL) {
-	  debug_write("cannot have ':' in passwd");
-        graceful_exit (112);
-      }
-
-      mvaddstr (12, 1, "And again:");
-      mvaddstr (13, 1, "=> ");
+      mvaddstr (10, 1, "And again:");
+      mvaddstr (11, 1, "=> ");
 
       if (mygetnstr (repeatbuf, DGL_PASSWDLEN, 0) != OK)
 	  return 0;
@@ -1600,8 +1590,20 @@ changepw (int dowrite)
         error = 1;
     }
 
+  int i;
+  char salt[] = "$6$1234567890123456";
+
+  if (((i = open("/dev/urandom", O_RDONLY)) == -1) ||
+      (read(i, salt + 3, 16) != 16) ||
+      (close(i) == -1))
+    graceful_exit(150);
+
+  for (i = 3; i < 3 + 16; i++)
+    salt[i] = ("abcdefghijklmnopqrstuvwxyzABCDEF"
+               "GHIJKLMNOPQRSTUVWXYZ0123456789./")[salt[i] & 63];
+
   free(me->password);
-  me->password = strdup (crypt (buf, buf));
+  me->password = strdup (crypt (buf, salt));
 
   if (dowrite)
     writefile (0);
@@ -2098,15 +2100,9 @@ newuser ()
 int
 passwordgood (char *cpw)
 {
-  char *crypted;
   assert (me != NULL);
 
-  crypted = crypt (cpw, cpw);
-  if (crypted == NULL)
-      return 0;
-  if (!strncmp (crypted, me->password, DGL_PASSWDLEN))
-    return 1;
-  if (!strncmp (cpw, me->password, DGL_PASSWDLEN))
+  if (!strncmp (crypt (cpw, me->password), me->password, 128))
     return 1;
 
   return 0;
