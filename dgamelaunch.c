@@ -104,6 +104,13 @@ int  showplayers = 0;
 int  initplayer = 0;
 void (*g_chain_winch)(int);
 
+struct userpref {
+   char *name;
+   char *value;
+   struct userpref *npref;
+};
+struct userpref *userprefs = NULL;
+
 #ifndef USE_SQLITE3
 int f_num = 0;
 struct dg_user **users = NULL;
@@ -168,7 +175,7 @@ mysetenv (const char* name, const char* value, int overwrite)
 {
   int retval;
   char *buf = NULL;
-  
+
   if (getenv(name) == NULL || overwrite)
   {
     size_t len = strlen(name) + 1 + strlen(value) + 1; /* NAME=VALUE\0 */
@@ -178,8 +185,8 @@ mysetenv (const char* name, const char* value, int overwrite)
   }
   else
     retval = -1;
-  
-  return retval;  
+
+  return retval;
 }
 #else /* use native setenv */
 # define mysetenv setenv
@@ -1752,7 +1759,7 @@ domailuser (char *username)
 
   fprintf (user_spool, "%s:%s\n", me->username, message);
 
-  /* 
+  /*
    * Don't unlock the file ourselves, this way it will be done automatically
    * after all data has been written. (Using file locking with stdio is icky.)
    */
@@ -1928,7 +1935,7 @@ loginprompt (int from_ttyplay)
 	  setproctitle("%s", me->username);
       dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_LOGIN], 0, me);
     }
-  else 
+  else
   {
     me = NULL;
     if (from_ttyplay == 1)
@@ -1937,7 +1944,7 @@ loginprompt (int from_ttyplay)
       refresh();
       sleep(2);
     }
-  } 
+  }
 }
 
 /* ************************************************************* */
@@ -2071,7 +2078,7 @@ newuser ()
         error = 0;
       else
         error = 1;
- 
+
       if (*buf == '\0')
       {
         free (me->username);
@@ -2106,6 +2113,92 @@ passwordgood (char *cpw)
     return 1;
 
   return 0;
+}
+
+/* ************************************************************* */
+
+void
+freeprefs()
+{
+    struct userpref *cpref;
+    for (cpref = userprefs; cpref; ) {
+        cpref = cpref->npref;
+        free(userprefs->name);
+        free(userprefs->value);
+        free(userprefs);
+        userprefs = cpref;
+    }
+}
+
+int
+readprefs ()
+{
+    FILE *upf;
+    struct userpref **cpref = &userprefs;
+    int prefcount = 0;
+    char buf[256];
+    char *p;
+    char *nameptr;
+    char *valptr;
+
+    freeprefs();
+    upf = fopen(userpref_path, "r");
+    if (!upf) return -1;
+    while (fgets(buf, 256, upf)) {
+        /* first token is 'name' - must start with letter */
+        /* skip over any leading non-letter garbage */
+        for (p = buf; (*p < 'a' || *p > 'z') && (*p < 'A' || *p > 'Z'); p++)
+            if (p >= buf + 256) {
+                fclose(upf);
+                return prefcount;
+            }
+        nameptr = p;
+        /* rest of name can be alphanum */
+        for ( ; (*p >= 'a' && *p <= 'z')
+             || (*p >= 'A' && *p <= 'Z')
+             || (*p >= '0' && *p <= '9'); p++)
+            if (p >= buf + 256) {
+                fclose(upf);
+                return prefcount;
+            }
+        /* first non-alphanum is delimiter (it should be a space) */
+        *p++ = 0;
+        /* skip extra whitespace */
+        for (; *p == ' ' || *p == '\t'; p++)
+            if (p >= buf + 256) {
+                fclose(upf);
+                return prefcount;
+            }
+        valptr = p;
+        /* can probably acccept anything that's not a newline here */
+        for (; *p; p++)
+            if (p >= buf + 256 || *p == '\n') {
+                *p = 0;
+                break;
+            }
+        *cpref = (struct userpref *)malloc(sizeof(struct userpref));
+        (*cpref)->name = strdup(nameptr);
+        (*cpref)->value = strdup(valptr);
+        cpref = &(*cpref)->npref;
+        prefcount++;
+    }
+    fclose(upf);
+    return prefcount;
+}
+
+int
+writeprefs ()
+{
+    struct userpref *cpref;
+    int prefcount = 0;
+    FILE *upf = fopen (userpref_path, "w");
+    if (!upf) return -1;
+    for (cpref = userprefs; cpref; cpref = cpref->npref) {
+        fprintf (upf, "%s %s\n", cpref->name, cpref->value);
+        prefcount++;
+    }
+    fclose(upf);
+    return prefcount;
 }
 
 /* ************************************************************* */
@@ -2738,7 +2831,7 @@ main (int argc, char** argv)
   for (i = 0; i < argc; i++)
     saved_argv[i] = strdup(argv[i]);
   saved_argv[i] = '\0';
-  
+
   compat_init_setproctitle(argc, argv);
   argv = saved_argv;
 #endif

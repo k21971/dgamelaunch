@@ -67,6 +67,9 @@ typedef enum
     DGLCMD_UNLINK,	/* unlink foo */
     DGLCMD_EXEC,	/* exec foo bar */
     DGLCMD_SETENV,	/* setenv foo bar */
+    DGLCMD_SETPREFPATH,	/* setprefpath foo */
+    DGLCMD_READPREFS,	/* readprefs */
+    DGLCMD_WRITEPREFS,	/* writeprefs */
     DGLCMD_WATCH_MENU,  /* watch_menu */
     DGLCMD_LOGIN,       /* ask_login */
     DGLCMD_REGISTER,	/* ask_register */
@@ -285,6 +288,7 @@ extern int dgl_local_COLS;
 extern int dgl_local_LINES;
 
 extern char last_ttyrec[512];
+extern char *userpref_path;
 
 /* dgamelaunch.c */
 extern void create_config(void);
@@ -351,6 +355,8 @@ extern void write_canned_rcfile(int game, char *target);
 extern void writefile(int requirenew);
 extern void graceful_exit(int status);
 extern int purge_stale_locks(int game);
+extern int readprefs(void);
+extern int writeprefs(void);
 /*extern int menuloop(void);*/
 extern void ttyrec_getpty(void);
 #ifndef HAVE_SETENV

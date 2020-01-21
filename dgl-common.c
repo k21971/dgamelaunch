@@ -58,6 +58,7 @@ int curses_resize = 0;
 
 int selected_game = 0;
 int return_from_submenu = 0;
+char *userpref_path = NULL;
 
 mode_t default_fmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
@@ -352,6 +353,18 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_CHMAIL:
 	    if (loggedin) change_email();
+	    break;
+        case DGLCMD_SETPREFPATH:
+            if (loggedin && p1) {
+                free(userpref_path);
+                userpref_path = strdup(dgl_format_str(NULL, me, p1, playername));
+            }
+            break;
+        case DGLCMD_READPREFS:
+            if (loggedin && userpref_path) readprefs();
+	    break;
+        case DGLCMD_WRITEPREFS:
+            if (loggedin && userpref_path) writeprefs();
 	    break;
 	case DGLCMD_WATCH_MENU:
 	    inprogressmenu(-1);
