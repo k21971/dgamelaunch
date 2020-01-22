@@ -384,6 +384,9 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
                 userpref_path = strdup(dgl_format_str(-1, me, p1, playername));
             }
             break;
+        case DGLCMD_SETPREF:
+            if (p1 && p2) setpref(p1, p2);
+            break;
         case DGLCMD_READPREFS:
             if (loggedin && userpref_path) readprefs();
 	    break;

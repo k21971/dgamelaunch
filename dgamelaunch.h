@@ -68,6 +68,7 @@ typedef enum
     DGLCMD_EXEC,	/* exec foo bar */
     DGLCMD_SETENV,	/* setenv foo bar */
     DGLCMD_SETPREFPATH,	/* setprefpath foo */
+    DGLCMD_SETPREF,	/* setpref foo bar */
     DGLCMD_READPREFS,	/* readprefs */
     DGLCMD_WRITEPREFS,	/* writeprefs */
     DGLCMD_WATCH_MENU,  /* watch_menu */
