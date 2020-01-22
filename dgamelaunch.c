@@ -397,6 +397,42 @@ idle_alarm_reset(void)
 
 
 char *
+bannerstr_substprefs(char *buf, char *bufnew, int buflen)
+{
+    char *src = buf;
+    char *dst = bufnew;
+    char *varname = NULL;
+    char *fallback = NULL; 
+    int isdollar = 0;
+    if (!src) return NULL;
+    while (*src && dst < bufnew + buflen - 1) {
+        if (*src == '$') {
+            isdollar = 1;
+        } else if (isdollar) {
+            isdollar = 0;
+            if (*src == '{')
+                varname = src + 1;
+            else
+                *dst++ = '$';
+        } else if (varname || fallback) {
+            if (*src == ':') {
+                *src = '\0';
+                fallback = src + 1;
+            } else if (*src == '}') {
+                *src = '\0';
+                snprintf(dst, bufnew + buflen - dst - 1, "%s", getpref(varname, fallback));
+                for (; *dst; dst++);
+                fallback = varname = NULL;
+            }
+        } else
+            *dst++ = *src;
+        src++;
+    }
+    *dst = '\0';
+    return bufnew;
+}
+
+char *
 bannerstrmangle(char *buf, char *bufnew, int buflen, char *fromstr, char *tostr)
 {
     char *loc;
@@ -567,6 +603,7 @@ loadbanner (char *fname, struct dg_banner *ban)
 	  } else {
 	      strncpy(bufnew, bannerstrmangle(bufnew, tmpbufnew, DGL_BANNER_LINELEN, "$USERNAME", "[Anonymous]"), DGL_BANNER_LINELEN);
 	  }
+          strncpy(bufnew, bannerstr_substprefs(bufnew, tmpbufnew, DGL_BANNER_LINELEN), DGL_BANNER_LINELEN);
 	  banner_addline(ban, bufnew);
       }
 
