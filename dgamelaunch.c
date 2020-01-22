@@ -2173,7 +2173,7 @@ int
 readprefs ()
 {
     FILE *upf;
-    struct userpref **cpref = &userprefs;
+    struct userpref **cpref;
     int prefcount = 0;
     char buf[256];
     char *p;
@@ -2183,6 +2183,7 @@ readprefs ()
     freeprefs();
     upf = fopen(userpref_path, "r");
     if (!upf) return -1;
+    cpref = &userprefs;
     while (fgets(buf, 256, upf)) {
         /* first token is 'name' - must start with letter */
         /* skip over any leading non-letter garbage */
@@ -2860,6 +2861,12 @@ runmenuloop(struct dg_menu *menu)
 		tmpopt = tmpopt->next;
 	    }
 	}
+        if (redraw_banner) {
+            redraw_banner = 0;
+            freebanner(&ban);
+            loadbanner(menu->banner_fn, &ban);
+            doclear = 1;
+        }
 
 	if (return_from_submenu) {
 	    freebanner(&ban);

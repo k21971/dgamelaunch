@@ -58,6 +58,7 @@ int curses_resize = 0;
 
 int selected_game = 0;
 int return_from_submenu = 0;
+int redraw_banner = 0;
 char *userpref_path = NULL;
 
 mode_t default_fmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -410,6 +411,9 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	case DGLCMD_SUBMENU:
 	    if (p1)
 		runmenuloop(dgl_find_menu(p1));
+	    break;
+	case DGLCMD_REDRAW:
+	    redraw_banner = 1;
 	    break;
 	case DGLCMD_RETURN:
 	    return_from_submenu = 1;

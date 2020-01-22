@@ -80,6 +80,7 @@ typedef enum
     DGLCMD_PLAYGAME,	/* play_game "foo" */
     DGLCMD_PLAY_IF_EXIST,	/* play_if_exist "game" "file" */
     DGLCMD_SUBMENU,	/* submenu "foo" */
+    DGLCMD_REDRAW,	/* redraw */
     DGLCMD_RETURN	/* return */
 } dglcmd_actions;
 
@@ -278,6 +279,7 @@ extern int set_max;
 
 extern int selected_game;
 extern int return_from_submenu;
+extern int redraw_banner;
 
 extern struct dg_globalconfig globalconfig;
 
