@@ -402,7 +402,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
     char *src = buf;
     char *dst = bufnew;
     char *varname = NULL;
-    char *fallback = NULL; 
+    char *fallback = NULL;
     int isdollar = 0;
     if (!src) return NULL;
     while (*src && dst < bufnew + buflen - 1) {
@@ -412,8 +412,10 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
             isdollar = 0;
             if (*src == '{')
                 varname = src + 1;
-            else
+            else {
                 *dst++ = '$';
+                *dst++ = *src;
+            }
         } else if (varname || fallback) {
             if (*src == ':') {
                 *src = '\0';
