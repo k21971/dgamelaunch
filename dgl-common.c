@@ -119,14 +119,17 @@ dgl_find_menu(char *menuname)
  * %t == ttyrec file (full path&name) of the last game played.
  * %w == 'watched' player (string; from 'plrname', or 'me' if 'plrname' is null)
  * %N, %W, %L (char; first character of their lowercase counterparts)
+ * ${varname[:default]} expands to userpref value of varname if defined, else
+ * default if specified.
  */
 char *
 dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 {
     static char buf[1024];
-    char *f, *p, *end;
+    char *f, *p, *end, *varname = NULL, *fallback = NULL;
     int ispercent = 0;
     int isbackslash = 0;
+    int isdollar = 0;
 
     if (!str) return NULL;
 
@@ -136,7 +139,18 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
     end = buf + sizeof(buf) - 10;
 
     while (*f) {
-	if (ispercent) {
+        if (varname || fallback) {
+           if (*f == ':') {
+               fallback = f+1;
+               *f = '\0';
+           }
+           if (*f == '}') {
+               *f = '\0';
+               snprintf(p, end + 1 - p, "%s", getpref(varname, fallback));
+               for (; *p; p++);
+               varname = fallback = NULL;
+           }
+	} else if (ispercent) {
 	    switch (*f) {
 	    case 'u':
 		snprintf (p, end + 1 - p, "%d", globalconfig.shed_uid);
@@ -231,7 +245,17 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 		ispercent = 1;
 	    } else if (*f == '\\') {
 		isbackslash = 1;
+            } else if (isdollar && *f == '{') {
+               varname = f+1;
+               fallback = NULL;
+               isdollar = 0;
+            } else if (*f == '$') {
+                isdollar = 1;
 	    } else {
+                if (isdollar) { /* not part of a variable/pref, so copy the literal $ */
+                    isdollar = 0;
+                    *p++ = '$';
+                }
 		*p = *f;
 		if (p < end)
 		    p++;
@@ -357,7 +381,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
         case DGLCMD_SETPREFPATH:
             if (loggedin && p1) {
                 free(userpref_path);
-                userpref_path = strdup(dgl_format_str(NULL, me, p1, playername));
+                userpref_path = strdup(dgl_format_str(-1, me, p1, playername));
             }
             break;
         case DGLCMD_READPREFS:
@@ -811,13 +835,13 @@ populate_games (int xgame, int *l, struct dg_user *me)
 graceful_exit (int status)
 {
   /*FILE *fp;
-     if (status != 1) 
-     { 
+     if (status != 1)
+     {
      fp = fopen ("/crash.log", "a");
      char buf[100];
      sprintf (buf, "graceful_exit called with status %d", status);
      fputs (buf, fp);
-     } 
+     }
      This doesn't work. Ever.
    */
   endwin();

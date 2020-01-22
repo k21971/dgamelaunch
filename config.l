@@ -21,6 +21,7 @@ VALUE		\"[^"]*\"
 MALSTRING	\"[^\"\n]*\n
 COMMENT		^[\t ]*#.*
 WHITE		[\t ]*
+UPREF           \$\{[a-zA-Z][a-zA-Z0-9]*(:{VALUE})?\}
 
 %%
 
@@ -47,6 +48,11 @@ WHITE		[\t ]*
   return TYPE_MALSTRING; 
 }
 
+{UPREF} {
+  yylval.s = strdup(yytext); /* leave as is - we will parse manually at 'run-time'. */
+  return TYPE_VALUE;
+}
+
 {WHITE}		{ }
 {COMMENT}	{ }
 
@@ -58,6 +64,7 @@ WHITE		[\t ]*
 "}"		{ return '}'; }
 "("		{ return '('; }
 ")"		{ return ')'; }
+"$"             { return '$'; }
 "shed_user"	{ return TYPE_SUSER; }
 "shed_group"	{ return TYPE_SGROUP; }
 "shed_uid"	{ return TYPE_SUID; }

@@ -2201,6 +2201,36 @@ writeprefs ()
     return prefcount;
 }
 
+const char *
+getpref(char *key, char *fallback)
+{
+    struct userpref *cpref;
+    for (cpref = userprefs; cpref; cpref = cpref->npref)
+        if (!strcmp(cpref->name, key))
+            return (const char *)cpref->value;
+    return fallback ? (const char *)fallback : "";
+}
+
+int
+setpref(char *key, char *val)
+{
+    struct userpref *cpref;
+    for (cpref = userprefs; cpref; cpref = cpref->npref)
+        if (!strcmp(cpref->name, key)) {
+            free(cpref->value);
+            cpref->value = strdup(val);
+            return TRUE;
+        }
+    /* prepend to list to avoid ugly double-indirection */
+    cpref = (struct userpref *)malloc(sizeof(struct userpref));
+    if (!cpref) return FALSE;
+    cpref->name = strdup(key);
+    cpref->value = strdup(val);
+    cpref->npref = userprefs;
+    userprefs = cpref;
+    return TRUE;
+}
+
 /* ************************************************************* */
 
 int
