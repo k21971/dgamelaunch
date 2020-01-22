@@ -2219,6 +2219,7 @@ readprefs ()
         *cpref = (struct userpref *)malloc(sizeof(struct userpref));
         (*cpref)->name = strdup(nameptr);
         (*cpref)->value = strdup(valptr);
+        (*cpref)->npref = NULL;
         cpref = &(*cpref)->npref;
         prefcount++;
     }
