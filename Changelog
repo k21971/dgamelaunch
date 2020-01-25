@@ -1,3 +1,10 @@
+Later (2018-2020)
+	* Enhanced watchmode - use game's built-in whatch function instead of
+	  ttyplay, when available
+	* improved password salting.
+	* userprefs - variable setting and expansion in config and banner files
+	  and save/restore of these variables on a per-user basis.
+
 1.5.2 (2011/xx/xx)
 	* Output some identifying information into the ttyrecs.
 	* Added banner inclusion and configurable string replacements.
