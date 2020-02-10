@@ -2272,6 +2272,52 @@ setpref(char *key, char *val)
     return TRUE;
 }
 
+void
+delpref(char *key)
+{
+    struct userpref *cpref = userprefs;
+    /* ugly special case #1 (list empty) */
+    if (!userprefs) return;
+    /* ugly special case #2 (delete first item) */
+    if (!strcmp (userprefs->name, key)) {
+        free(userprefs->name);
+        free(userprefs->value);
+        userprefs = userprefs->npref;
+        free(cpref);
+        return;
+    }
+    /* ugly general case (delete another item) */
+    while (cpref->npref) {
+        if (!strcmp (cpref->npref->name, key)) {
+            struct userpref *dpref = cpref->npref;
+            cpref->npref = dpref->npref;
+            free(dpref->name);
+            free(dpref->value);
+            free(dpref);
+            return;
+        }
+        cpref = cpref->npref;
+    }
+}
+
+int
+askpref (char *prompt, char *key)
+{
+    /* blank entry removes any previously stored value */
+    char value[80];
+    clear();
+    drawbanner(&banner);
+    mvaddstr(13, 1, prompt);
+    mvaddstr(14, 1, "=> ");
+    mygetnstr(value, 80, 1);
+    if (strlen(value) == 0) {
+        delpref(key);
+        return TRUE;
+    }
+    return setpref(key, value);
+}
+
+
 /* ************************************************************* */
 
 int

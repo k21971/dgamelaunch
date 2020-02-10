@@ -388,6 +388,9 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
         case DGLCMD_SETPREF:
             if (p1 && p2) setpref(p1, p2);
             break;
+        case DGLCMD_ASKPREF:
+            if (p1 && p2) askpref(p1, p2);
+            break;
         case DGLCMD_READPREFS:
             if (loggedin && userpref_path) readprefs();
 	    break;

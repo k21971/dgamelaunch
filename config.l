@@ -128,6 +128,7 @@ chpasswd	{ yylval.i = DGLCMD_CHPASSWD;   return TYPE_DGLCMD0; }
 chmail		{ yylval.i = DGLCMD_CHMAIL;     return TYPE_DGLCMD0; }
 setprefpath	{ yylval.i = DGLCMD_SETPREFPATH; return TYPE_DGLCMD1; }
 setpref 	{ yylval.i = DGLCMD_SETPREF;    return TYPE_DGLCMD2; }
+askpref 	{ yylval.i = DGLCMD_ASKPREF;    return TYPE_DGLCMD2; }
 readprefs	{ yylval.i = DGLCMD_READPREFS;  return TYPE_DGLCMD0; }
 writeprefs	{ yylval.i = DGLCMD_WRITEPREFS; return TYPE_DGLCMD0; }
 watch_menu	{ yylval.i = DGLCMD_WATCH_MENU; return TYPE_DGLCMD0; }

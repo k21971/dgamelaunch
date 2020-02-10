@@ -69,6 +69,7 @@ typedef enum
     DGLCMD_SETENV,	/* setenv foo bar */
     DGLCMD_SETPREFPATH,	/* setprefpath foo */
     DGLCMD_SETPREF,	/* setpref foo bar */
+    DGLCMD_ASKPREF,	/* askpref "prompt" foo */
     DGLCMD_READPREFS,	/* readprefs */
     DGLCMD_WRITEPREFS,	/* writeprefs */
     DGLCMD_WATCH_MENU,  /* watch_menu */
@@ -362,6 +363,7 @@ extern int readprefs(void);
 extern int writeprefs(void);
 extern const char *getpref(char *key, char *fallback);
 extern int setpref(char *key, char *val);
+extern int askpref(char *prompt, char *key);
 /*extern int menuloop(void);*/
 extern void ttyrec_getpty(void);
 #ifndef HAVE_SETENV
