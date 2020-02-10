@@ -126,7 +126,7 @@ dgl_find_menu(char *menuname)
 char *
 dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 {
-    static char buf[1024];
+    char buf[1024];
     char *f, *p, *end, *varname = NULL, *fallback = NULL;
     int ispercent = 0;
     int isbackslash = 0;
@@ -266,7 +266,7 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
     }
     *p = '\0';
 
-    return buf;
+    return strdup(buf);
 }
 
 int
@@ -280,16 +280,11 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 
     if (!queue) return 1;
 
-    p1 = (char *)malloc(1024);
-    p2 = (char *)malloc(1024);
-
-    if (!p1 || !p2) return 1;
-
     return_from_submenu = 0;
 
     while (tmp && !return_from_submenu) {
-	if (tmp->param1) strcpy(p1, dgl_format_str(game, me, tmp->param1, playername));
-	if (tmp->param2) strcpy(p2, dgl_format_str(game, me, tmp->param2, playername));
+	if (tmp->param1) p1 = dgl_format_str(game, me, tmp->param1, playername);
+	if (tmp->param2) p2 = dgl_format_str(game, me, tmp->param2, playername);
 
 	switch (tmp->cmd) {
 	default: break;
@@ -382,7 +377,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
         case DGLCMD_SETPREFPATH:
             if (loggedin && p1) {
                 free(userpref_path);
-                userpref_path = strdup(dgl_format_str(-1, me, p1, playername));
+                userpref_path = dgl_format_str(-1, me, p1, playername);
             }
             break;
         case DGLCMD_SETPREF:
@@ -438,9 +433,12 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		for (userchoice = 0; userchoice < num_games; userchoice++) {
 		    if (!strcmp(myconfig[userchoice]->game_id, p1) || !strcmp(myconfig[userchoice]->game_name, p1) || !strcmp(myconfig[userchoice]->shortname, p1)) {
 			if (purge_stale_locks(userchoice)) {
+                            char *ttrecdir = NULL
 			    if (myconfig[userchoice]->rcfile) {
-				if (access (dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
-				    write_canned_rcfile (userchoice, dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL));
+                                char *rcname = NULL;
+				if (access (rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
+				    write_canned_rcfile (userchoice, rcname);
+                                if (rcname) free(rcname);
 			    }
 
 			    setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
@@ -456,7 +454,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 
 			    /* fix the variables in the arguments */
 			    for (i = 0; i < myconfig[userchoice]->num_args; i++) {
-				tmpstr = strdup(dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL));
+				tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
 				free(myconfig[userchoice]->bin_args[i]);
 				myconfig[userchoice]->bin_args[i] = tmpstr;
 			    }
@@ -468,10 +466,11 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 			    idle_alarm_set_enabled(0);
 			    /* launch program */
 			    ttyrec_main (userchoice, me->username,
-					 dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
+					 ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
 					 gen_ttyrec_filename());
 			    idle_alarm_set_enabled(1);
 			    played = 1;
+                            if (ttrecdir) free(ttrecdir);
 			    /* lastly, run the generic "do these when a game is left" commands */
 			    signal (SIGHUP, catch_sighup);
 			    signal (SIGINT, catch_sighup);
@@ -494,11 +493,9 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	}
 	tmp = tmp->next;
+        if (p1) free(p1);
+        if (p2) free(p2);
     }
-
-    free(p1);
-    free(p2);
-
     return 0;
 }
 
@@ -714,13 +711,14 @@ populate_games (int xgame, int *l, struct dg_user *me)
 
   for (game = ((xgame < 0) ? 0 : xgame); game < ((xgame <= 0) ? num_games : (xgame+1)); game++) {
 
-      dir = strdup(dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL));
+      dir = dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL);
       if (!dir) continue;
 
       if (!(pdir = opendir (dir))) {
 	  debug_write("cannot open inprogress-dir");
 	  graceful_exit (140);
       }
+      free(dir);
 
    while ((pdirent = readdir (pdir)))
     {
@@ -733,6 +731,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
       if (!inprog) continue;
 
       snprintf (fullname, 130, "%s%s", inprog, pdirent->d_name);
+      free(inprog);
 
       fd = 0;
       /* O_RDWR here should be O_RDONLY, but we need to test for
@@ -756,6 +755,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
 	      ttrecdir = dgl_format_str(game, NULL, myconfig[game]->ttyrecdir, playername);
 	      if (!ttrecdir) continue;
               snprintf (ttyrecname, 130, "%s%s", ttrecdir, replacestr);
+              free(ttrecdir);
 
           if (!stat (ttyrecname, &pstat))
             {
@@ -820,6 +820,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
                                      myconfig[game]->extra_info_file,
                                      games[len]->name);
                   game_read_extra_info(games[len], extra_info_file);
+                  free(extra_info_file);
               }
 
 	      len++;

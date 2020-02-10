@@ -284,7 +284,7 @@ gen_ttyrec_filename ()
 char*
 gen_inprogress_lock (int game, pid_t pid, char* ttyrec_filename)
 {
-  char *lockfile = NULL, filebuf[80];
+  char *lockfile = NULL, *inprogdir = NULL, filebuf[80];
   int fd;
   size_t len, wrlen;
   struct flock fl = { 0 };
@@ -299,11 +299,12 @@ gen_inprogress_lock (int game, pid_t pid, char* ttyrec_filename)
   fl.l_start = 0;
   fl.l_len = 0;
 
-  len = strlen(dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL)) + strlen(me->username) + strlen(ttyrec_filename) + 13;
+  len = strlen(inprogdir = dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL)) + strlen(me->username) + strlen(ttyrec_filename) + 13;
   lockfile = calloc(len, sizeof(char));
 
-  snprintf (lockfile, len, "%s%s:%s", dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL),
+  snprintf (lockfile, len, "%s%s:%s", inprogdir,
             me->username, ttyrec_filename);
+  free(inprogdir);
 
   fd = open (lockfile, O_WRONLY | O_CREAT, 0644);
   if (fcntl (fd, F_SETLKW, &fl) == -1) {
@@ -1332,7 +1333,7 @@ watchgame:
                   dgl_exec_cmdqueue_w(myconfig[gnum]->watchcmdqueue, gnum, me, chosen_name);
                   /* fix the variables in the arguments */
                   for (i = 0; i < myconfig[gnum]->num_wargs; i++) {
-                      wargs[i] = strdup(dgl_format_str(gnum, me, myconfig[gnum]->watch_args[i], chosen_name));
+                      wargs[i] = dgl_format_str(gnum, me, myconfig[gnum]->watch_args[i], chosen_name);
                   }
                   wargs[myconfig[gnum]->num_wargs] = NULL;
                   /* tidy up signals before launching external process */
@@ -2741,7 +2742,7 @@ purge_stale_locks (int game)
   size_t len;
   short firsttime = 1;
 
-  dir = strdup(dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL));
+  dir = dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL);
 
   if (!(pdir = opendir (dir))) {
       debug_write("purge_stale_locks dir open failed");
@@ -2753,7 +2754,7 @@ purge_stale_locks (int game)
   while ((dent = readdir (pdir)) != NULL)
     {
       FILE *ipfile;
-      char *colon, *fn;
+      char *colon, *fn, *inprogdir = NULL;
       char buf[16];
       pid_t pid;
       size_t len;
@@ -2773,10 +2774,11 @@ purge_stale_locks (int game)
       if (strncmp (dent->d_name, me->username, colon - dent->d_name))
         continue;
 
-      len = strlen (dent->d_name) + strlen(dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL)) + 1;
+      len = strlen (dent->d_name) + strlen(inprogdir = dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL)) + 1;
       fn = malloc (len);
 
-      snprintf (fn, len, "%s%s", dgl_format_str(game, me, myconfig[game]->inprogressdir, NULL), dent->d_name);
+      snprintf (fn, len, "%s%s", inprogdir, dent->d_name);
+      free(inprogdir);
 
       if (!(ipfile = fopen (fn, "r"))) {
 	  debug_write("purge_stale_locks fopen inprogressdir fail");
