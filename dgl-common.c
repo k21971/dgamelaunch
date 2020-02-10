@@ -433,7 +433,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		for (userchoice = 0; userchoice < num_games; userchoice++) {
 		    if (!strcmp(myconfig[userchoice]->game_id, p1) || !strcmp(myconfig[userchoice]->game_name, p1) || !strcmp(myconfig[userchoice]->shortname, p1)) {
 			if (purge_stale_locks(userchoice)) {
-                            char *ttrecdir = NULL
+                            char *ttrecdir = NULL;
 			    if (myconfig[userchoice]->rcfile) {
                                 char *rcname = NULL;
 				if (access (rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
