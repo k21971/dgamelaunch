@@ -122,12 +122,15 @@ dgl_find_menu(char *menuname)
  * %N, %W, %L (char; first character of their lowercase counterparts)
  * ${varname[:default]} expands to userpref value of varname if defined, else
  * default if specified.
+ *
+ * Now returns a dynamically allocated string which must be freed.
  */
 char *
 dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 {
     char buf[1024];
     char *f, *p, *end, *varname = NULL, *fallback = NULL;
+    char *gpr = NULL;
     int ispercent = 0;
     int isbackslash = 0;
     int isdollar = 0;
@@ -147,7 +150,8 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
            }
            if (*f == '}') {
                *f = '\0';
-               snprintf(p, end + 1 - p, "%s", getpref(varname, fallback));
+               snprintf(p, end + 1 - p, "%s", gpr = getpref(varname, fallback));
+               if (gpr) free(gpr);
                for (; *p; p++);
                varname = fallback = NULL;
            }

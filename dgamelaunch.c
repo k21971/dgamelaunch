@@ -404,6 +404,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
     char *dst = bufnew;
     char *varname = NULL;
     char *fallback = NULL;
+    char *gpr = NULL;
     int isdollar = 0;
     if (!src) return NULL;
     while (*src && dst < bufnew + buflen - 1) {
@@ -423,7 +424,11 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
                 fallback = src + 1;
             } else if (*src == '}') {
                 *src = '\0';
-                snprintf(dst, bufnew + buflen - dst - 1, "%s", getpref(varname, fallback));
+                snprintf(dst, bufnew + buflen - dst - 1, "%s", gpr = getpref(varname, fallback));
+                if (gpr) {
+                    free(gpr); 
+                    gpr = NULL;
+                }
                 for (; *dst; dst++);
                 fallback = varname = NULL;
             }
@@ -2243,14 +2248,16 @@ writeprefs ()
     return prefcount;
 }
 
-const char *
+/* getpref allocates memory for the return value.
+   This must be freed when finished */
+char *
 getpref(char *key, char *fallback)
 {
     struct userpref *cpref;
     for (cpref = userprefs; cpref; cpref = cpref->npref)
         if (!strcmp(cpref->name, key))
-            return (const char *)cpref->value;
-    return fallback ? (const char *)fallback : "";
+            return strdup(cpref->value);
+    return fallback ? dgl_format_str(0, me, fallback, NULL) : strdup("");
 }
 
 int

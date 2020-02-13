@@ -361,7 +361,7 @@ extern void graceful_exit(int status);
 extern int purge_stale_locks(int game);
 extern int readprefs(void);
 extern int writeprefs(void);
-extern const char *getpref(char *key, char *fallback);
+extern char *getpref(char *key, char *fallback);
 extern int setpref(char *key, char *val);
 extern int askpref(char *prompt, char *key);
 /*extern int menuloop(void);*/
