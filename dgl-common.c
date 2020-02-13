@@ -134,6 +134,8 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
     int ispercent = 0;
     int isbackslash = 0;
     int isdollar = 0;
+    int firstchar = 0; /* special case for returning
+                          only the first char of a userpref */
 
     if (!str) return NULL;
 
@@ -150,7 +152,12 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
            }
            if (*f == '}') {
                *f = '\0';
-               snprintf(p, end + 1 - p, "%s", gpr = getpref(varname, fallback));
+               gpr = getpref(varname, fallback);
+               if (firstchar) {
+                   snprintf(p, end + 1 - p, "%c", gpr[0]);
+                   firstchar = 0;
+               } else
+                   snprintf(p, end + 1 - p, "%s", gpr);
                if (gpr) free(gpr);
                for (; *p; p++);
                varname = fallback = NULL;
@@ -254,6 +261,8 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
                varname = f+1;
                fallback = NULL;
                isdollar = 0;
+            } else if (isdollar && *f == '0') {
+               firstchar = 1; /* don't reset isdollar here */
             } else if (*f == '$') {
                 isdollar = 1;
 	    } else {

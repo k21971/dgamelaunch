@@ -406,17 +406,22 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
     char *fallback = NULL;
     char *gpr = NULL;
     int isdollar = 0;
+    int firstchar = 0;
     if (!src) return NULL;
     while (*src && dst < bufnew + buflen - 1) {
         if (*src == '$') {
             isdollar = 1;
         } else if (isdollar) {
-            isdollar = 0;
-            if (*src == '{')
-                varname = src + 1;
-            else {
-                *dst++ = '$';
-                *dst++ = *src;
+            if (*src == '0') {
+                firstchar = 1;
+            } else {
+		isdollar = 0;
+		if (*src == '{') {
+		    varname = src + 1;
+		} else {
+		    *dst++ = '$';
+		    *dst++ = *src;
+		}
             }
         } else if (varname || fallback) {
             if (*src == ':') {
@@ -424,11 +429,13 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
                 fallback = src + 1;
             } else if (*src == '}') {
                 *src = '\0';
-                snprintf(dst, bufnew + buflen - dst - 1, "%s", gpr = getpref(varname, fallback));
-                if (gpr) {
-                    free(gpr); 
-                    gpr = NULL;
-                }
+                gpr = getpref(varname, fallback);
+                if (firstchar) {
+                    firstchar = 0;
+                    snprintf(dst, bufnew + buflen - dst - 1, "%c", gpr[0]);
+                } else
+                    snprintf(dst, bufnew + buflen - dst - 1, "%s", gpr);
+                if (gpr) free(gpr); 
                 for (; *dst; dst++);
                 fallback = varname = NULL;
             }
