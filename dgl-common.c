@@ -147,7 +147,7 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 
     while (*f) {
         if (varname || fallback) {
-           if (*f == ':' && !nest) {
+           if (*f == ':' && nest == 1) {
                fallback = f+1;
                *f = '\0';
            } else if (*f == '{') {
@@ -155,6 +155,8 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
            } else if (*f == '}' && !(--nest)) {
                *f = '\0';
                gpr = getpref(varname, fallback);
+               *f = '}'; /* put back how we found it */
+               if (fallback) *(fallback-1) = ':';
                if (firstchar) {
                    snprintf(p, end + 1 - p, "%c", gpr[0]);
                    firstchar = 0;
@@ -260,6 +262,7 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 	    } else if (*f == '\\') {
 		isbackslash = 1;
             } else if (isdollar && *f == '{') {
+               nest++;
                varname = f+1;
                fallback = NULL;
                isdollar = 0;
@@ -361,10 +364,11 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		int myargc = 0;
 		char *words[32]; /* max args - this is arbitrary */
 		char **myargv; /* allocate these when we know how many */
-		char *p; 
+		char *p;
 		int isspace = 1;
 		int i;
-		for (p = tmp->param2; *p; p++) {
+                char *p2_unformat = strdup(tmp->param2);
+		for (p = p2_unformat; *p; p++) {
 		    if (*p == ' ') {
 		        isspace++;
 		        *p = 0;
@@ -380,6 +384,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
                     myargv[i] = dgl_format_str(game, me, words[i-1], playername);
 		}
 		myargv[i] = 0;
+                free(p2_unformat);
 
 		clear();
 		refresh();

@@ -411,7 +411,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
     if (!src) return NULL;
     while (*src && dst < bufnew + buflen - 1) {
         if (varname || fallback) {
-            if (*src == ':' && !nest) {
+            if (*src == ':' && nest == 1) {
                 *src = '\0';
                 fallback = src + 1;
             } else if (*src == '{') {
