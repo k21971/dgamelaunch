@@ -134,6 +134,7 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
     int ispercent = 0;
     int isbackslash = 0;
     int isdollar = 0;
+    int nest = 0;
     int firstchar = 0; /* special case for returning
                           only the first char of a userpref */
 
@@ -146,11 +147,12 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 
     while (*f) {
         if (varname || fallback) {
-           if (*f == ':') {
+           if (*f == ':' && !nest) {
                fallback = f+1;
                *f = '\0';
-           }
-           if (*f == '}') {
+           } else if (*f == '{') {
+               nest++;
+           } else if (*f == '}' && !(--nest)) {
                *f = '\0';
                gpr = getpref(varname, fallback);
                if (firstchar) {
@@ -285,7 +287,6 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 int
 dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername)
 {
-    int i;
     struct dg_cmdpart *tmp = queue;
     char *p1;
     char *p2;
@@ -296,8 +297,8 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
     return_from_submenu = 0;
 
     while (tmp && !return_from_submenu) {
-	if (tmp->param1) p1 = dgl_format_str(game, me, tmp->param1, playername);
-	if (tmp->param2) p2 = dgl_format_str(game, me, tmp->param2, playername);
+	p1 = tmp->param1 ? dgl_format_str(game, me, tmp->param1, playername) : NULL;
+	p2 = tmp->param2 ? dgl_format_str(game, me, tmp->param2, playername) : NULL;
 
 	switch (tmp->cmd) {
 	default: break;
@@ -352,12 +353,33 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_EXEC:
 	    if (p1 && p2) {
+                /* split the un-formatted p2 value on whitespace and pass it
+                 * as separate args after re-formatting each part. This can
+                 * probably done better in the config parser, but this works.
+                 */
 		pid_t child;
-		char *myargv[3];
+		int myargc = 0;
+		char *words[32]; /* max args - this is arbitrary */
+		char **myargv; /* allocate these when we know how many */
+		char *p; 
+		int isspace = 1;
+		int i;
+		for (p = tmp->param2; *p; p++) {
+		    if (*p == ' ') {
+		        isspace++;
+		        *p = 0;
+		    } else if (isspace) {
+		        isspace = 0;
+		        words[myargc++] = p;
+		    }
+		}
+		myargv = calloc(++myargc + 1, sizeof (char *));
 
 		myargv[0] = p1;
-		myargv[1] = p2;
-		myargv[2] = 0;
+		for (i = 1; i < myargc; i++) {
+                    myargv[i] = dgl_format_str(game, me, words[i-1], playername);
+		}
+		myargv[i] = 0;
 
 		clear();
 		refresh();
@@ -371,8 +393,14 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		} else if (child == 0) {
 		    execvp(p1, myargv);
 		    exit(0);
-		} else
+		} else {
+                    /* argv[0] is 'p1' which gets freed later */
+                    for (i = 1; i < myargc; i++) {
+                        free(myargv[i]);
+                    }
+                    free (myargv);
 		    waitpid(child, NULL, 0);
+                }
 		idle_alarm_set_enabled(1);
 		initcurses();
 		check_retard(1);
