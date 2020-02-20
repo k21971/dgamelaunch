@@ -1,9 +1,11 @@
-Later (2018-2020)
+1.6.0-hdf (2018-2020)
 	* Enhanced watchmode - use game's built-in whatch function instead of
-	  ttyplay, when available
-	* improved password salting.
+	  ttyplay, when available (FIQ/Tangles)
+	* improved password salting (K2/kerio)
 	* userprefs - variable setting and expansion in config and banner files
-	  and save/restore of these variables on a per-user basis.
+	  and save/restore of these variables on a per-user basis (Tangles)
+	* multi-arg exec (exec "cmd" "args separated by spaces in one string")
+		- Can't yet do args w/spaces. Fix later if needed. (Tangles)
 
 1.5.2 (2011/xx/xx)
 	* Output some identifying information into the ttyrecs.
