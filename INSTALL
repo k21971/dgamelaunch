@@ -1,0 +1,23 @@
+QUICK START INSTALL ON LINUX
+============================
+
+This is known to work on Ubuntu 16.04 and 18.04, but should work elsewhere with
+minimal change.
+
+
+To build:
+
+ ./autogen.sh --with-config-file=/opt/nethack/dgamelaunch.conf --enable-shmem --enable-sqlite
+ make
+
+
+To install (fresh install):
+
+ sudo ./dgl-create-chroot
+
+
+To update (install new version to an existing chroot):
+
+ # Edit top section of install-to-chroot.sh with local config.
+ sudo ./install-to-chroot.sh
+
