@@ -6,10 +6,10 @@
 # Licensed under the MIT License
 # https://opensource.org/licenses/MIT
 
-# autonamed chroot directory. Can rename.
+# autonamed dgl binary. Symlink points to this.
 DATESTAMP=`date +%Y%m%d-%H%M%S`
 NAO_CHROOT="/opt/nethack/chroot"
-# already compiled versions of dgl and nethack
+# dgl has been compiled in this directory
 DGL_GIT="/home/build/dgamelaunch"
 # the user & group from dgamelaunch config file.
 USRGRP="games:games"
