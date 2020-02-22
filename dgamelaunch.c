@@ -3126,12 +3126,12 @@ main (int argc, char** argv)
       if (chdir (globalconfig.dglroot))
         {
           perror("warning: cannot chdir to dglroot directory, using / instead");
+          if (chdir ("/"))
+	    {
+	      perror ("cannot chdir to root directory");
+	      graceful_exit (3);
+	    }
         }
-      else if (chdir ("/"))
-	{
-	  perror ("cannot chdir to root directory");
-	  graceful_exit (3);
-	}
 
       /* shed privs. this is done immediately after chroot. */
       if (setgroups (1, &globalconfig.shed_gid) == -1)
