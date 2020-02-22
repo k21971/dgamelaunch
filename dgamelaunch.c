@@ -3123,7 +3123,11 @@ main (int argc, char** argv)
 	  graceful_exit (2);
 	}
 
-      if (chdir ("/"))
+      if (chdir (globalconfig.dglroot))
+        {
+          perror("warning: cannot chdir to dglroot directory, using / instead");
+        }
+      else if (chdir ("/"))
 	{
 	  perror ("cannot chdir to root directory");
 	  graceful_exit (3);
