@@ -82,7 +82,8 @@ typedef enum
     DGLCMD_PLAY_IF_EXIST,	/* play_if_exist "game" "file" */
     DGLCMD_SUBMENU,	/* submenu "foo" */
     DGLCMD_REDRAW,	/* redraw */
-    DGLCMD_RETURN	/* return */
+    DGLCMD_RETURN,	/* return */
+    DGLCMD_SLEEP        /* sleep */
 } dglcmd_actions;
 
 typedef enum

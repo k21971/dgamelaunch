@@ -15,6 +15,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <curses.h>
+#include <sys/errno.h>
 
 extern FILE* yyin;
 extern int yyparse ();
@@ -461,6 +462,19 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_RETURN:
 	    return_from_submenu = 1;
+	    break;
+	case DGLCMD_SLEEP:
+	    if (p1) {
+		char *end;
+		long time = strtol(p1, &end, 10);
+		if (errno == EINVAL) {
+		    printf("Error computing sleep value '%s'\n", p1);
+		    break;
+		} else if (errno == ERANGE) {
+		    printf("Sleep value out of range: '%s'\n", p1);
+		}
+		sleep((unsigned int) time);
+	    }
 	    break;
 	case DGLCMD_PLAY_IF_EXIST:
 	    if (!(loggedin && me && p1 && p2)) break;

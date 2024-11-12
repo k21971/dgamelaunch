@@ -141,6 +141,7 @@ submenu		{ yylval.i = DGLCMD_SUBMENU;     return TYPE_DGLCMD1; }
 return		{ yylval.i = DGLCMD_RETURN;      return TYPE_DGLCMD0; }
 redraw		{ yylval.i = DGLCMD_REDRAW;     return TYPE_DGLCMD0; }
 rawprint	{ yylval.i = DGLCMD_RAWPRINT;    return TYPE_DGLCMD1; }
+sleep		{ yylval.i = DGLCMD_SLEEP;       return TYPE_DGLCMD1; }
 DEFINE		{ return TYPE_DEFINE_GAME; }
 
 
