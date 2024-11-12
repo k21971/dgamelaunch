@@ -463,6 +463,16 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	case DGLCMD_RETURN:
 	    return_from_submenu = 1;
 	    break;
+	case DGLCMD_IF_NX_SLEEP:
+	    if (p2) {
+		FILE *tmpfile;
+		tmpfile = fopen(p2, "r");
+		if (tmpfile) {
+		    fclose(tmpfile);
+		    break;
+		}
+	    }
+	    /* fall through if file does not exist */
 	case DGLCMD_SLEEP:
 	    if (p1) {
 		char *end;

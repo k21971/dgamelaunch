@@ -83,7 +83,8 @@ typedef enum
     DGLCMD_SUBMENU,	/* submenu "foo" */
     DGLCMD_REDRAW,	/* redraw */
     DGLCMD_RETURN,	/* return */
-    DGLCMD_SLEEP        /* sleep */
+    DGLCMD_SLEEP,       /* sleep foo */
+    DGLCMD_IF_NX_SLEEP, /* ifnxsleep foo bar */
 } dglcmd_actions;
 
 typedef enum
