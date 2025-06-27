@@ -1691,7 +1691,14 @@ changepw (int dowrite)
   if (((i = open("/dev/urandom", O_RDONLY)) == -1) ||
       (read(i, salt + 3, 16) != 16) ||
       (close(i) == -1))
-    graceful_exit(150);
+    {
+      clear();
+      mvaddstr(10, 1, "Error generating secure password. Please try again.");
+      mvaddstr(11, 1, "Press any key to continue...");
+      refresh();
+      dgl_getch();
+      return 0;
+    }
 
   for (i = 3; i < 3 + 16; i++)
     salt[i] = ("abcdefghijklmnopqrstuvwxyzABCDEF"
@@ -2199,7 +2206,7 @@ passwordgood (char *cpw)
 {
   assert (me != NULL);
 
-  if (!strncmp (crypt (cpw, me->password), me->password, 128))
+  if (!strcmp (crypt (cpw, me->password), me->password))
     return 1;
 
   return 0;

@@ -2,8 +2,9 @@ NAME = @PACKAGE_NAME@
 VERSION = @PACKAGE_VERSION@
 
 exclusions = CVS .svn .cvsignore tags autogen.sh svn-commit.tmp .\#*
-exec_prefix = @exec_prefix@
 prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
 sbindir = @sbindir@
 mandir = @mandir@
 

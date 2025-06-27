@@ -9,7 +9,6 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC(cc gcc)
 AC_CHECK_INCLUDES_DEFAULT
 
-
 AC_PROG_LEX
 if test -z "$LEX"; then
    AC_MSG_ERROR([lex or flex not found.])
