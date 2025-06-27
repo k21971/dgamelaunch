@@ -811,8 +811,8 @@ shm_mk_keys(key_t *shm_key, key_t *shm_sem_key)
 }
 
 #ifdef USE_SHMEM
-int
-shm_free()
+static int
+shm_free(void)
 {
     key_t shm, sem;
     int   shm_id;
@@ -882,8 +882,8 @@ shm_init(struct dg_shm **shm_dg_data, struct dg_shm_game **shm_dg_game)
 }
 
 #ifdef USE_SHMEM
-void
-shm_dump()
+static void
+shm_dump(void)
 {
     struct dg_shm *shm_dg_data = NULL;
     struct dg_shm_game *shm_dg_game = NULL;
@@ -2376,6 +2376,7 @@ askpref (char *prompt, char *key)
 int
 readfile (int nolock)
 {
+  (void)nolock; /* unused parameter */
 #ifndef USE_SQLITE3
   FILE *fp = NULL, *fpl = NULL;
   char buf[1200];
@@ -2533,7 +2534,7 @@ static int
 userexist_callback(void *NotUsed, int argc, char **argv, char **colname)
 {
     int i;
-    NotUsed = NULL;
+    (void)NotUsed; /* unused parameter */
 
     userexist_tmp_me = malloc(sizeof(struct dg_user));
 
@@ -2559,7 +2560,7 @@ userexist (char *cname, int isnew)
 {
     sqlite3 *db;
     char *errmsg = NULL;
-    int ret, retry = 10;
+    int ret;
 
     char *qbuf;
 
@@ -2569,7 +2570,7 @@ userexist (char *cname, int isnew)
     strncpy(tmpbuf, cname, (isnew ? globalconfig.max_newnick_len : DGL_PLAYERNAMELEN));
 
     /* Check that the nick doesn't interfere with already registered nicks */
-    if (isnew && (strlen(cname) >= globalconfig.max_newnick_len))
+    if (isnew && (strlen(cname) >= (size_t)globalconfig.max_newnick_len))
 	strcat(tmpbuf, "%");
 
     qbuf = sqlite3_mprintf("select * from dglusers where username = '%q' collate nocase limit 1", tmpbuf);
@@ -2752,7 +2753,7 @@ writefile (int requirenew)
 {
     sqlite3 *db;
     char *errmsg = NULL;
-    int ret, retry = 10;
+    int ret;
 
     char *qbuf;
 

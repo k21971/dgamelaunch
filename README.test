@@ -1,0 +1,89 @@
+# DGamelaunch Test Scripts
+
+These scripts help build and test dgamelaunch in a non-chroot environment.
+
+## Quick Start
+
+1. Build dgamelaunch:
+   ```bash
+   ./setup-test.sh
+   ```
+
+2. Run dgamelaunch:
+   ```bash
+   ./test-dgamelaunch.sh
+   ```
+
+## Scripts
+
+### setup-test.sh
+Builds dgamelaunch with appropriate configuration for testing:
+- Detects SQLite support automatically
+- Builds with shared memory support
+- Compiles the ee and virus editors
+- Configures for test directory at `/tmp/dgl-test`
+
+Options:
+- `--no-clean`: Skip `make clean` step
+
+### test-dgamelaunch.sh
+Runs dgamelaunch in a test environment:
+- Creates necessary directories
+- Initializes SQLite database (if using SQLite build)
+- Generates configuration files
+- Launches dgamelaunch
+
+Options:
+- `--reset`: Remove and recreate test environment
+
+Environment variables:
+- `DGAMELAUNCH_TEST_DIR`: Override test directory (default: `/tmp/dgl-test`)
+- `NETHACK_PATH`: Path to NetHack installation (default: `/usr/games/lib/official_36_nethackdir`)
+
+## Prerequisites
+
+### For SQLite support (recommended):
+```bash
+sudo apt-get install libsqlite3-dev sqlite3
+```
+
+### For NetHack to work properly:
+```bash
+# Make NetHack files accessible
+sudo chmod 666 /usr/games/lib/official_36_nethackdir/var/{perm,record,logfile,xlogfile}
+sudo chmod 777 /usr/games/lib/official_36_nethackdir/var /usr/games/lib/official_36_nethackdir/var/save
+sudo chmod 644 /usr/games/lib/official_36_nethackdir/sysconf
+```
+
+## Testing Features
+
+The test environment allows you to verify:
+- User registration and login
+- SQLite database persistence
+- Game launching (NetHack)
+- Built-in editors (ee and virus)
+- Password/email changes
+- Game watching
+- TTY recording
+
+## Troubleshooting
+
+1. **"This script must be run in an interactive terminal!"**
+   - Run the script directly in a terminal, not through automation
+
+2. **"sqlite3 command not found"**
+   - Install sqlite3: `sudo apt-get install sqlite3`
+
+3. **"Cannot open file perm" when launching NetHack**
+   - Run the chmod commands shown in Prerequisites
+
+4. **Games don't save between runs**
+   - Make sure you're using the same test directory
+   - Check that SQLite is properly initialized
+
+## Clean Up
+
+To remove all test data:
+```bash
+rm -rf /tmp/dgl-test
+```
