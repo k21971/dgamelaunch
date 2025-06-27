@@ -252,7 +252,7 @@ signals_release()
 
 /* ************************************************************* */
 
-char *
+const char *
 get_mainmenu_name()
 {
     if (loggedin) {
@@ -454,7 +454,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
 }
 
 static char *
-bannerstrmangle(char *buf, char *bufnew, int buflen, char *fromstr, char *tostr)
+bannerstrmangle(char *buf, char *bufnew, int buflen, const char *fromstr, const char *tostr)
 {
     char *loc;
     char *b = buf;
@@ -532,7 +532,7 @@ banner_var_resolve(struct dg_banner_var *bv)
 }
 
 char *
-banner_var_value(char *name)
+banner_var_value(const char *name)
 {
     struct dg_banner_var *bv = globalconfig.banner_var_list;
     while (bv) {
@@ -559,7 +559,7 @@ freebanner(struct dg_banner *ban)
 }
 
 static void
-banner_addline(struct dg_banner *ban, char *line)
+banner_addline(struct dg_banner *ban, const char *line)
 {
     size_t len = strlen(line);
     if (!ban) return;
@@ -1158,7 +1158,7 @@ inprogressmenu (int gameid)
 
 	  for (curr_watchcol = watchcols; *curr_watchcol; ++curr_watchcol) {
               struct dg_watchcols *wcol = *curr_watchcol;
-	      char *col = wcol->colname;
+	      const char *col = wcol->colname;
 	      int x = wcol->x;
 	      while (*col == ' ') { x++; col++; }
 	      if (sortmode == (dg_sortmode)wcol->sortmode) attron(title_attr);
@@ -1535,7 +1535,7 @@ inprogressdisplay (int gameid)
 static int
 check_email (char *s)
 {
-  char *atomchars = "!#$%&'*+-/=?^_`{|}~" "0123456789"
+  const char *atomchars = "!#$%&'*+-/=?^_`{|}~" "0123456789"
     "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   int f;
 

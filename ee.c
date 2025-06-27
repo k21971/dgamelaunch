@@ -25,24 +25,24 @@
  |	the quality of the materials inferior to
  |	supported materials.
  |
- |	This software is not a product of Hewlett-Packard, Co., or any 
+ |	This software is not a product of Hewlett-Packard, Co., or any
  |	other company.  No support is implied or offered with this software.
  |	You've got the source, and you're on your own.
  |
  |	This software may be distributed under the terms of Larry Wall's 
- |	Artistic license, a copy of which is included in this distribution. 
+ |	Artistic license, a copy of which is included in this distribution.
  |
  |	This notice must be included with this software and any derivatives.
  |
- |	This editor was purposely developed to be simple, both in 
- |	interface and implementation.  This editor was developed to 
- |	address a specific audience: the user who is new to computers 
+ |	This editor was purposely developed to be simple, both in
+ |	interface and implementation.  This editor was developed to
+ |	address a specific audience: the user who is new to computers
  |	(especially UNIX).
- |	
- |	ee is not aimed at technical users; for that reason more 
- |	complex features were intentionally left out.  In addition, 
- |	ee is intended to be compiled by people with little computer 
- |	experience, which means that it needs to be small, relatively 
+ |
+ |	ee is not aimed at technical users; for that reason more
+ |	complex features were intentionally left out.  In addition,
+ |	ee is intended to be compiled by people with little computer
+ |	experience, which means that it needs to be small, relatively
  |	simple in implementation, and portable.
  |
  |	This software and documentation contains
@@ -55,16 +55,16 @@
 
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <wchar.h>
-wchar_t *ee_copyright_message = 
+const wchar_t *ee_copyright_message =
 L"Copyright (c) 1986, 1990, 1991, 1992, 1993, 1994, 1995, 1996 Hugh Mahon ";
 
-wchar_t *ee_long_notice[] = {
-	L"This software and documentation contains", 
-	L"proprietary information which is protected by", 
+const wchar_t *ee_long_notice[] = {
+	L"This software and documentation contains",
+	L"proprietary information which is protected by",
 	L"copyright.  All rights are reserved."
 	};
 
-wchar_t *version = L"@(#) ee, version 1.4.1  $Revision: 1.10 $";
+const wchar_t *version = L"@(#) ee, version 1.4.1  $Revision: 1.10 $";
 
 #include <locale.h>
 #include <curses.h>
@@ -171,9 +171,9 @@ wint_t in;			/* input character			*/
 
 FILE *temp_fp;			/* temporary file pointer		*/
 
-wchar_t *table[] = { 
-	L"^@", L"^A", L"^B", L"^C", L"^D", L"^E", L"^F", L"^G", L"^H", L"\t", L"^J", 
-	L"^K", L"^L", L"^M", L"^N", L"^O", L"^P", L"^Q", L"^R", L"^S", L"^T", L"^U", 
+const wchar_t *table[] = {
+	L"^@", L"^A", L"^B", L"^C", L"^D", L"^E", L"^F", L"^G", L"^H", L"\t", L"^J",
+	L"^K", L"^L", L"^M", L"^N", L"^O", L"^P", L"^Q", L"^R", L"^S", L"^T", L"^U",
 	L"^V", L"^W", L"^X", L"^Y", L"^Z", L"^[", L"^\\", L"^]", L"^^", L"^_"
 	};
 
@@ -191,7 +191,7 @@ WINDOW *info_win;
 
 /*
  |	The following structure allows menu items to be flexibly declared.
- |	The first item is the string describing the selection, the second 
+ |	The first item is the string describing the selection, the second
  |	is the address of the procedure to call when the item is selected,
  |	and the third is the argument for the procedure.
  |
@@ -199,18 +199,18 @@ WINDOW *info_win;
  |	catalog number.  The 'int *' should be replaced with 'void *' on 
  |	systems with that type.
  |
- |	The first menu item will be the title of the menu, with NULL 
+ |	The first menu item will be the title of the menu, with NULL
  |	parameters for the procedure and argument, followed by the menu items.
  |
- |	If the procedure value is NULL, the menu item is displayed, but no 
- |	procedure is called when the item is selected.  The number of the 
- |	item will be returned.  If the third (argument) parameter is -1, no 
+ |	If the procedure value is NULL, the menu item is displayed, but no
+ |	procedure is called when the item is selected.  The number of the
+ |	item will be returned.  If the third (argument) parameter is -1, no
  |	argument is given to the procedure when it is called.
  */
 
 struct menu_entries
 {
-	wchar_t *item_string;
+	const wchar_t *item_string;
 	int (*procedure)P_((struct menu_entries *));
 	struct menu_entries *ptr_argument;
 	int (*iprocedure)P_((int));
@@ -245,9 +245,9 @@ void down(void);
 void function_key(void);
 void command_prompt(void);
 void command(wchar_t *cmd_str1);
-int scan(wchar_t *line, int offset, int column);
-wchar_t *get_string(wchar_t *prompt, int advance);
-int compare(wchar_t *string1, wchar_t *string2, int sensitive);
+int scan(const wchar_t *line, int offset, int column);
+wchar_t *get_string(const wchar_t *prompt, int advance);
+int compare(wchar_t *string1, const wchar_t *string2, int sensitive);
 void goto_line(wchar_t *cmd_str);
 void midscreen(int line, wchar_t *pnt);
 void check_fp(void);
@@ -287,7 +287,7 @@ int Blank_Line(struct text *test_line);
 void echo_string(wchar_t *string);
 int first_word_len(struct text *test_line);
 wchar_t *is_in_string(wchar_t *string, wchar_t *substring);
-int unique_test(wchar_t *string, wchar_t *list[]);
+int unique_test(wchar_t *string, const wchar_t *list[]);
 void strings_init(void);
 
 #undef P_
@@ -323,14 +323,14 @@ struct menu_entries main_menu[] = {
 	{NULL, NULL, NULL, NULL, NULL, -1}
 	};
 
-wchar_t *help_text[23];
-wchar_t *control_keys[5];
+const wchar_t *help_text[23];
+const wchar_t *control_keys[5];
 
-wchar_t *emacs_help_text[22];
-wchar_t *emacs_control_keys[5];
+const wchar_t *emacs_help_text[22];
+const wchar_t *emacs_control_keys[5];
 
-wchar_t *command_strings[5];
-wchar_t *commands[32];
+const wchar_t *command_strings[5];
+const wchar_t *commands[32];
 
 #define MENU_WARN 1
 
@@ -340,80 +340,80 @@ wchar_t *commands[32];
  |	Declarations for strings for localization
  */
 
-wchar_t *com_win_message;		/* to be shown in com_win if no info window */
-char *no_file_string;
-wchar_t *ascii_code_str;
-wchar_t *command_str;
-char *char_str;
-char *unkn_cmd_str;
-wchar_t *non_unique_cmd_msg;
-char *line_num_str;
-char *line_len_str;
-char *current_file_str;
-wchar_t *usage0;
-wchar_t *usage1;
-wchar_t *usage2;
-wchar_t *usage3;
-wchar_t *usage4;
-char *file_is_dir_msg;
-char *new_file_msg;
-char *cant_open_msg;
-wchar_t *open_file_msg;
-char *file_read_fin_msg;
-char *reading_file_msg;
-char *read_only_msg;
-char *file_read_lines_msg;
-wchar_t *save_file_name_prompt;
-char *file_not_saved_msg;
-wchar_t *changes_made_prompt;
-wchar_t *yes_char;
-wchar_t *file_exists_prompt;
-char *create_file_fail_msg;
-char *writing_file_msg;
-char *file_written_msg;
-char *searching_msg;
-char *str_not_found_msg;
-wchar_t *search_prompt_str;
-wchar_t *continue_msg;
-wchar_t *menu_cancel_msg;
-wchar_t *menu_size_err_msg;
-wchar_t *press_any_key_msg;
-wchar_t *ON;
-wchar_t *OFF;
-wchar_t *HELP;
-wchar_t *SAVE;
-wchar_t *READ;
-wchar_t *LINE;
-wchar_t *FILE_str;
-wchar_t *CHARACTER;
-wchar_t *REDRAW;
-wchar_t *RESEQUENCE;
-wchar_t *AUTHOR;
-wchar_t *ee_VERSION;
-wchar_t *CASE;
-wchar_t *NOCASE;
-wchar_t *EXPAND;
-wchar_t *NOEXPAND;
-wchar_t *Exit_string;
-wchar_t *QUIT_string;
-wchar_t *INFO;
-wchar_t *NOINFO;
-wchar_t *MARGINS;
-wchar_t *NOMARGINS;
-wchar_t *AUTOFORMAT;
-wchar_t *NOAUTOFORMAT;
-wchar_t *Echo;
-wchar_t *PRINTCOMMAND;
-wchar_t *RIGHTMARGIN;
-wchar_t *HIGHLIGHT;
-wchar_t *NOHIGHLIGHT;
-wchar_t *EIGHTBIT;
-wchar_t *NOEIGHTBIT;
-wchar_t *EMACS_string;
-wchar_t *NOEMACS_string;
-wchar_t *cancel_string;
-char *menu_too_lrg_msg;
-wchar_t *more_above_str, *more_below_str;
+const wchar_t *com_win_message;		/* to be shown in com_win if no info window */
+const char *no_file_string;
+const wchar_t *ascii_code_str;
+const wchar_t *command_str;
+const char *char_str;
+const char *unkn_cmd_str;
+const wchar_t *non_unique_cmd_msg;
+const char *line_num_str;
+const char *line_len_str;
+const char *current_file_str;
+const wchar_t *usage0;
+const wchar_t *usage1;
+const wchar_t *usage2;
+const wchar_t *usage3;
+const wchar_t *usage4;
+const char *file_is_dir_msg;
+const char *new_file_msg;
+const char *cant_open_msg;
+const wchar_t *open_file_msg;
+const char *file_read_fin_msg;
+const char *reading_file_msg;
+const char *read_only_msg;
+const char *file_read_lines_msg;
+const wchar_t *save_file_name_prompt;
+const char *file_not_saved_msg;
+const wchar_t *changes_made_prompt;
+const wchar_t *yes_char;
+const wchar_t *file_exists_prompt;
+const char *create_file_fail_msg;
+const char *writing_file_msg;
+const char *file_written_msg;
+const char *searching_msg;
+const char *str_not_found_msg;
+const wchar_t *search_prompt_str;
+const wchar_t *continue_msg;
+const wchar_t *menu_cancel_msg;
+const wchar_t *menu_size_err_msg;
+const wchar_t *press_any_key_msg;
+const wchar_t *ON;
+const wchar_t *OFF;
+const wchar_t *HELP;
+const wchar_t *SAVE;
+const wchar_t *READ;
+const wchar_t *LINE;
+const wchar_t *FILE_str;
+const wchar_t *CHARACTER;
+const wchar_t *REDRAW;
+const wchar_t *RESEQUENCE;
+const wchar_t *AUTHOR;
+const wchar_t *ee_VERSION;
+const wchar_t *CASE;
+const wchar_t *NOCASE;
+const wchar_t *EXPAND;
+const wchar_t *NOEXPAND;
+const wchar_t *Exit_string;
+const wchar_t *QUIT_string;
+const wchar_t *INFO;
+const wchar_t *NOINFO;
+const wchar_t *MARGINS;
+const wchar_t *NOMARGINS;
+const wchar_t *AUTOFORMAT;
+const wchar_t *NOAUTOFORMAT;
+const wchar_t *Echo;
+const wchar_t *PRINTCOMMAND;
+const wchar_t *RIGHTMARGIN;
+const wchar_t *HIGHLIGHT;
+const wchar_t *NOHIGHLIGHT;
+const wchar_t *EIGHTBIT;
+const wchar_t *NOEIGHTBIT;
+const wchar_t *EMACS_string;
+const wchar_t *NOEMACS_string;
+const wchar_t *cancel_string;
+const char *menu_too_lrg_msg;
+const wchar_t *more_above_str, *more_below_str;
 
 #ifndef __STDC__
 #ifndef HAS_STDLIB
@@ -792,7 +792,7 @@ int character;
 int column;
 {
 	int i1, i2;
-	wchar_t *string;
+	const wchar_t *string;
 
 	if (character == TAB)
 	{
@@ -1589,12 +1589,9 @@ void command(wchar_t *cmd_str1)		/* process commands from keyboard	*/
 }
 
 int 
-scan(line, offset, column)	/* determine horizontal position for get_string	*/
-wchar_t *line;
-int offset;
-int column;
+scan(const wchar_t *line, int offset, int column)	/* determine horizontal position for get_string	*/
 {
-	wchar_t *stemp;
+	const wchar_t *stemp;
 	int i;
 	int j;
 
@@ -1611,9 +1608,7 @@ int column;
 }
 
 wchar_t *
-get_string(prompt, advance)	/* read string from input on command line */
-wchar_t *prompt;		/* string containing user prompt message	*/
-int advance;		/* if true, skip leading spaces and tabs	*/
+get_string(const wchar_t *prompt, int advance)	/* read string from input on command line */
 {
 	wchar_t *string;
 	wchar_t *tmp_string;
@@ -1707,13 +1702,10 @@ int advance;		/* if true, skip leading spaces and tabs	*/
 }
 
 int 
-compare(string1, string2, sensitive)	/* compare two strings	*/
-wchar_t *string1;
-wchar_t *string2;
-int sensitive;
+compare(wchar_t *string1, const wchar_t *string2, int sensitive)	/* compare two strings	*/
 {
 	wchar_t *strng1;
-	wchar_t *strng2;
+	const wchar_t *strng2;
 	int tmp;
 	int equal;
 
@@ -3435,9 +3427,7 @@ wchar_t * string, *substring;
  */
 
 int 
-unique_test(string, list)
-wchar_t *string;
-wchar_t *list[];
+unique_test(wchar_t *string, const wchar_t *list[])
 {
 	int counter;
 	int num_match;

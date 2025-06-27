@@ -222,8 +222,8 @@ struct dg_watchcols {
     int dat;
     int sortmode;
     int x;
-    char *colname;
-    char *fmt;
+    const char *colname;
+    const char *fmt;
 };
 
 struct dg_globalconfig
@@ -288,14 +288,14 @@ extern char *userpref_path;
 /* dgamelaunch.c */
 extern void create_config(void);
 extern void ttyrec_getmaster(void);
-extern char *get_mainmenu_name(void);
+extern const char *get_mainmenu_name(void);
 extern char *gen_ttyrec_filename(void);
 extern char *gen_inprogress_lock(int game, pid_t pid, char *ttyrec_filename);
 extern void catch_sighup(int signum);
 extern void loadbanner(char *fname, struct dg_banner *ban);
 extern void drawbanner(struct dg_banner *ban);
 extern void banner_var_add(char *name, char *value, int special);
-extern char *banner_var_value(char *name);
+extern char *banner_var_value(const char *name);
 extern void banner_var_free(void);
 extern int check_retard(int reset);
 extern char *dgl_format_str(int game, struct dg_user *me, char *str, char *plrname);
@@ -303,7 +303,7 @@ extern char *dgl_format_str(int game, struct dg_user *me, char *str, char *plrna
 extern void term_resize_check(void);
 extern void sigwinch_func(int sig);
 
-extern struct dg_menu *dgl_find_menu(char *menuname);
+extern struct dg_menu *dgl_find_menu(const char *menuname);
 
 extern int dgl_exec_cmdqueue(struct dg_cmdpart *queue, int game, struct dg_user *me);
 extern int dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername);

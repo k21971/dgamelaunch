@@ -24,20 +24,20 @@ extern void (*g_chain_winch)(int);
 /* Data structures */
 struct dg_config **myconfig = NULL;
 struct dg_config defconfig = {
-  /* game_path = */ "/bin/nethack",
+  /* game_path = */ (char *)"/bin/nethack",
   /* watch_path = */ NULL,
-  /* game_name = */ "NetHack",
+  /* game_name = */ (char *)"NetHack",
   /* game_id = */ NULL,
-  /* shortname = */ "NH",
+  /* shortname = */ (char *)"NH",
   /* rcfile = */ NULL, /*"/dgl-default-rcfile",*/
-  /* ttyrecdir =*/ "%ruserdata/%n/ttyrec/",
-  /* spool = */ "/var/mail/",
-  /* inprogressdir = */ "%rinprogress/",
+  /* ttyrecdir =*/ (char *)"%ruserdata/%n/ttyrec/",
+  /* spool = */ (char *)"/var/mail/",
+  /* inprogressdir = */ (char *)"%rinprogress/",
   /* num_args = */ 0,
   /* num_wargs = */ 0,
   /* bin_args = */ NULL,
   /* watch_args = */ NULL,
-  /* rc_fmt = */ "%rrcfiles/%n.nethackrc", /* [dglroot]rcfiles/[username].nethackrc */
+  /* rc_fmt = */ (char *)"%rrcfiles/%n.nethackrc", /* [dglroot]rcfiles/[username].nethackrc */
   /* cmdqueue = */ NULL,
   /* postcmdqueue = */ NULL,
   /* watchcmdqueue = */ NULL,
@@ -99,7 +99,7 @@ check_retard(int reset)
 
 
 struct dg_menu *
-dgl_find_menu(char *menuname)
+dgl_find_menu(const char *menuname)
 {
     struct dg_menulist *tmp = globalconfig.menulist;
 
@@ -872,7 +872,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
 		  p = pidws;
 		}
 	      else
-		p = "";
+		p = (char *)"";
 	      /* pid = atoi(p); -- value not used */
 	      while (*p != '\0' && *p != '\n')
 	        p++;
@@ -975,7 +975,7 @@ create_config ()
   else
   {
 #ifdef DEFCONFIG
-    config = DEFCONFIG;
+    config = (char *)DEFCONFIG;
     if ((config_file = fopen(DEFCONFIG, "r")) != NULL)
     {
       yyin = config_file;
@@ -1002,19 +1002,19 @@ create_config ()
       graceful_exit(113);
   }
 
-  if (!globalconfig.chroot) globalconfig.chroot = "/var/lib/dgamelaunch/";
+  if (!globalconfig.chroot) globalconfig.chroot = strdup("/var/lib/dgamelaunch/");
 
   if (globalconfig.max == 0) globalconfig.max = 64000;
   if (globalconfig.max_newnick_len == 0) globalconfig.max_newnick_len = DGL_PLAYERNAMELEN;
-  if (!globalconfig.dglroot) globalconfig.dglroot = "/dgldir/";
-  if (!globalconfig.banner)  globalconfig.banner = "/dgl-banner";
+  if (!globalconfig.dglroot) globalconfig.dglroot = strdup("/dgldir/");
+  if (!globalconfig.banner)  globalconfig.banner = strdup("/dgl-banner");
 
 #ifndef USE_SQLITE3
-  if (!globalconfig.passwd) globalconfig.passwd = "/dgl-login";
+  if (!globalconfig.passwd) globalconfig.passwd = strdup("/dgl-login");
 #else
-  if (!globalconfig.passwd) globalconfig.passwd = USE_SQLITE_DB;
+  if (!globalconfig.passwd) globalconfig.passwd = strdup(USE_SQLITE_DB);
 #endif
-  if (!globalconfig.lockfile) globalconfig.lockfile = "/dgl-lock";
+  if (!globalconfig.lockfile) globalconfig.lockfile = strdup("/dgl-lock");
   if (!globalconfig.shed_user && globalconfig.shed_uid == (uid_t)-1)
 	  {
 	      struct passwd *pw;

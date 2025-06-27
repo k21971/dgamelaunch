@@ -23,7 +23,7 @@
 
 #include "config.h"
 
-char *vi_Version = "0.0.6+dgamelaunch " PACKAGE_VERSION;
+const char *vi_Version = "0.0.6+dgamelaunch " PACKAGE_VERSION;
 
 /*
  * To compile:
@@ -153,11 +153,11 @@ static struct timeval tv;       // use select() for small sleeps
 static char erase_char;         // the users erase character
 static int rows, columns;       // the terminal screen is this size
 static int crow, ccol, offset;  // cursor is on Crow x Ccol with Horz Ofset
-static char *SOs, *SOn;         // terminal standout start/normal ESC sequence
-static char *bell;              // terminal bell sequence
-static char *Ceol, *Ceos;       // Clear-end-of-line and Clear-end-of-screen ESC sequence
-static char *CMrc;              // Cursor motion arbitrary destination ESC sequence
-static char *CMup, *CMdown;     // Cursor motion up and down ESC sequence
+static const char *SOs, *SOn;         // terminal standout start/normal ESC sequence
+static const char *bell;              // terminal bell sequence
+static const char *Ceol, *Ceos;       // Clear-end-of-line and Clear-end-of-screen ESC sequence
+static const char *CMrc;              // Cursor motion arbitrary destination ESC sequence
+static const char *CMup, *CMdown;     // Cursor motion up and down ESC sequence
 static Byte *status_buffer;     // mesages to the user
 static Byte last_input_char;    // last char read from user
 static Byte last_forward_char;  // last char searched for with 'f'
@@ -260,8 +260,8 @@ static void flash (int);        // flash the terminal screen
 static void beep (void);        // beep the terminal
 static void indicate_error (char);  // use flash or beep to indicate error
 static void show_status_line (void);  // put a message on the bottom line
-static void psb (char *, ...);  // Print Status Buf
-static void psbs (char *, ...); // Print Status Buf in standout mode
+static void psb (const char *, ...);  // Print Status Buf
+static void psbs (const char *, ...); // Print Status Buf in standout mode
 static void ni (Byte *);        // display messages
 static void edit_status (void); // show file status on status line
 static void redraw (int);       // force a full screen refresh
@@ -3742,7 +3742,7 @@ static void show_status_line(void)
 
 //----- format the status buffer, the bottom line of screen ------
 // print status buffer, with STANDOUT mode
-static void psbs(char *format, ...)
+static void psbs(const char *format, ...)
 {
   va_list args;
 
@@ -3759,7 +3759,7 @@ static void psbs(char *format, ...)
 }
 
 // print status buffer
-static void psb(char *format, ...)
+static void psb(const char *format, ...)
 {
   va_list args;
 

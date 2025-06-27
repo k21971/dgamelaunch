@@ -628,7 +628,7 @@ static void call_print_charset(char *exe, char **args)
     for (a = args2; *args; args++)
         *a++ = *args;
 
-    *a++ = "--print-charset";
+    *a++ = (char *)"--print-charset";
     *a = 0;
     execvp(exe, args2);
 }
