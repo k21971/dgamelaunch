@@ -103,19 +103,8 @@ typedef enum
     NUM_SORTMODES
 } dg_sortmode;
 
-static const char *SORTMODE_NAME[NUM_SORTMODES] = {
-    "Unsorted",
-    "Username",
-    "Game",
-    "Windowsize",
-    "Starttime",
-    "Duration",
-    "Idletime",
-    "Extrainfo",
-#ifdef USE_SHMEM
-    "Watchers",
-#endif
-};
+/* SORTMODE_NAME moved to config.y where it's actually used */
+extern const char *SORTMODE_NAME[NUM_SORTMODES];
 
 struct dg_banner_var {
     char *name;
@@ -311,7 +300,7 @@ extern void banner_var_free(void);
 extern int check_retard(int reset);
 extern char *dgl_format_str(int game, struct dg_user *me, char *str, char *plrname);
 
-extern void term_resize_check();
+extern void term_resize_check(void);
 extern void sigwinch_func(int sig);
 
 extern struct dg_menu *dgl_find_menu(char *menuname);

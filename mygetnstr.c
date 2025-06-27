@@ -32,6 +32,7 @@
  */
 
 #include <curses.h>
+#include "dgamelaunch.h"
 
 /* Assumes noecho(). */
 /* As with getnstr(), maxlen does not include the '\0' character. */

@@ -313,6 +313,7 @@ static unsigned char dec_graphics[MAXPCHARS] = {
   0x00
 };
 
+#if 0  /* Unused */
 static unsigned char IBM_r_oc_syms[18] = {  /* a la EPYX Rogue */
 /* 0*/ '\0',
   0x00,
@@ -336,6 +337,7 @@ static unsigned char IBM_r_oc_syms[18] = {  /* a la EPYX Rogue */
   0x00,
   0x00
 };
+#endif /* Unused */
 
 void
 populate_gfx_array (int gfxset)
@@ -390,7 +392,7 @@ strip_gfx (unsigned char inchar)
       return inchar;
     }
 
-  if (gfx_map[inchar] && (state == 1 || state == -1))
+  if (gfx_map[inchar] && (state == 1 || state == (unsigned int)-1))
     {
       return gfx_map[inchar];
     }

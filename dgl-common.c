@@ -18,7 +18,7 @@
 #include <sys/errno.h>
 
 extern FILE* yyin;
-extern int yyparse ();
+extern int yyparse (void);
 extern void (*g_chain_winch)(int);
 
 /* Data structures */
@@ -75,7 +75,7 @@ sigwinch_func(int sig)
 }
 
 void
-term_resize_check()
+term_resize_check(void)
 {
     if ((COLS == dgl_local_COLS) && (LINES == dgl_local_LINES) && !curses_resize) return;
 
@@ -333,6 +333,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		}
 	    }
 	    /* else fall through to cp */
+	    /* FALLTHROUGH */
 	case DGLCMD_CP:
 	    if (p1 && p2) {
 		FILE *cannedf, *newfile;
@@ -361,7 +362,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
                  * as separate args after re-formatting each part. This can
                  * probably done better in the config parser, but this works.
                  */
-		pid_t child;
+		pid_t exec_child;
 		int myargc = 0;
 		char *words[32]; /* max args - this is arbitrary */
 		char **myargv; /* allocate these when we know how many */
@@ -391,12 +392,12 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		refresh();
 		endwin();
 		idle_alarm_set_enabled(0);
-		child = fork();
-		if (child == -1) {
+		exec_child = fork();
+		if (exec_child == -1) {
 		    perror("fork");
 		    debug_write("exec-command fork failed");
 		    graceful_exit(114);
-		} else if (child == 0) {
+		} else if (exec_child == 0) {
 		    execvp(p1, myargv);
 		    exit(0);
 		} else {
@@ -452,7 +453,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	case DGLCMD_QUIT:
 	    debug_write("command: quit");
 	    graceful_exit(0);
-	    /* break; */
+	    break;
 	case DGLCMD_SUBMENU:
 	    if (p1)
 		runmenuloop(dgl_find_menu(p1));
@@ -473,6 +474,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		}
 	    }
 	    /* fall through if file does not exist */
+	    /* FALLTHROUGH */
 	case DGLCMD_SLEEP:
 	    if (p1) {
 		char *end;
@@ -496,6 +498,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		} else break;
 	    }
 	    /* else fall through to playgame */
+	    /* FALLTHROUGH */
 	case DGLCMD_PLAYGAME:
 	    if (loggedin && me && p1 && !played) {
 		int userchoice, i;
@@ -645,6 +648,7 @@ sort_game_starttime(const void *g1, const void *g2)
     return i;
 }
 
+#ifdef USE_SHMEM
 static int
 sort_game_watchers(const void *g1, const void *g2)
 {
@@ -659,6 +663,7 @@ sort_game_watchers(const void *g1, const void *g2)
 	return strcasecmp(game1->name, game2->name);
     return i;
 }
+#endif
 
 struct dg_game **
 sort_games (struct dg_game **games, int len, dg_sortmode sortmode)
@@ -741,7 +746,10 @@ game_read_extra_info(struct dg_game *game, const char *extra_info_file)
     if (!(ei = fopen(extra_info_file, "r")))
         return;
     *buffer = 0;
-    fgets(buffer, sizeof buffer, ei);
+    if (!fgets(buffer, sizeof buffer, ei)) {
+        fclose(ei);
+        return;
+    }
     fclose(ei);
 
     buflen = strlen(buffer);
@@ -761,11 +769,11 @@ game_read_extra_info(struct dg_game *game, const char *extra_info_file)
 struct dg_game **
 populate_games (int xgame, int *l, struct dg_user *me)
 {
-  int fd, len, n, pid;
+  int fd, len, n;
   DIR *pdir;
   struct dirent *pdirent;
   struct stat pstat;
-  char fullname[130], ttyrecname[130], pidws[80], playername[DGL_PLAYERNAMELEN+1];
+  char fullname[512], ttyrecname[130], pidws[80], playername[DGL_PLAYERNAMELEN+1];
   char *replacestr, *dir, *p;
   struct dg_game **games = NULL;
   struct flock fl = { 0 };
@@ -800,7 +808,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
 
       if (!inprog) continue;
 
-      snprintf (fullname, 130, "%s%s", inprog, pdirent->d_name);
+      snprintf (fullname, sizeof(fullname), "%s%s", inprog, pdirent->d_name);
       free(inprog);
 
       fd = 0;
@@ -865,7 +873,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
 		}
 	      else
 		p = "";
-	      pid = atoi(p);
+	      /* pid = atoi(p); -- value not used */
 	      while (*p != '\0' && *p != '\n')
 	        p++;
 	      if (*p != '\0')
@@ -933,7 +941,6 @@ void
 create_config ()
 {
   FILE *config_file = NULL;
-  int tmp;
 
   if (!globalconfig.allow_registration) globalconfig.allow_registration = 1;
   globalconfig.menulist = NULL;

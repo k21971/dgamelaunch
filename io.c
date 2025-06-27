@@ -38,6 +38,7 @@
 #include <errno.h>
 
 #include "ttyrec.h"
+#include "io.h"
 
 #define SWAP_ENDIAN(val) ((unsigned int) ( \
     (((unsigned int) (val) & (unsigned int) 0x000000ffU) << 24) | \
@@ -46,7 +47,7 @@
     (((unsigned int) (val) & (unsigned int) 0xff000000U) >> 24)))
 
 static int
-is_little_endian ()
+is_little_endian (void)
 {
   static int retval = -1;
 
@@ -126,12 +127,7 @@ write_header (FILE * fp, Header * h)
   return 1;
 }
 
-static char *progname = "";
-void
-set_progname (const char *name)
-{
-  progname = strdup (name);
-}
+/* progname removed - was never set, so error messages always had empty prefix */
 
 FILE *
 efopen (const char *path, const char *mode)
@@ -139,7 +135,7 @@ efopen (const char *path, const char *mode)
   FILE *fp = fopen (path, mode);
   if (fp == NULL)
     {
-      fprintf (stderr, "%s: %s: %s\n", progname, path, strerror (errno));
+      fprintf (stderr, "dgamelaunch: %s: %s\n", path, strerror (errno));
       exit (EXIT_FAILURE);
     }
   return fp;

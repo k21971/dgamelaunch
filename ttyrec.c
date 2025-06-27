@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-/* 1999-02-22 Arkadiusz Mi¶kiewicz <misiek@misiek.eu.org>
+/* 1999-02-22 Arkadiusz Miï¿½kiewicz <misiek@misiek.eu.org>
  * - added Native Language Support
  */
 
@@ -91,14 +91,12 @@ char last_ttyrec[512] = { '\0' };
 
 int ancient_encoding = 0;
 
-void
+static void
 ttyrec_id(int game, char *username, char *ttyrec_filename)
 {
-    int i;
     time_t tstamp;
     Header h;
     char *buf = (char *)malloc(1024);
-    char tmpbuf[256];
     char *server_id = banner_var_value("$SERVERID");
     if (!buf) return;
 
@@ -230,8 +228,12 @@ doinput ()
   register int cc;
   char ibuf[BUFSIZ];
 
-  while ((cc = read (0, ibuf, BUFSIZ)) > 0)
-    (void) write (master, ibuf, cc);
+  while ((cc = read (0, ibuf, BUFSIZ)) > 0) {
+    if (write (master, ibuf, cc) != cc) {
+      /* Write to master pty failed - child likely terminated */
+      break;
+    }
+  }
   done ();
 }
 
@@ -264,9 +266,10 @@ finish (int sig)
   wait_for_menu = 0;
 }
 
-void
+static void
 game_idle_kill(int signal)
 {
+    (void)signal; /* unused */
     kill(child, SIGHUP);
     kill(dgl_parent, SIGHUP);
 }
@@ -381,13 +384,12 @@ void
 dooutput (int max_idle_time)
 {
   int cc, i, len;
-  time_t tvec, time ();
-  char obuf[BUFSIZ], ubuf[BUFSIZ*4+2], *ctime (), *out;
+  char obuf[BUFSIZ], ubuf[BUFSIZ*4+2], *out;
   int galt = 0; // vt100 G switch
 
   setbuf (stdout, NULL);
   (void) close (0);
-  tvec = time ((time_t *) NULL);
+  /* tvec = time ((time_t *) NULL); -- value not used */
   /* Set up SIGALRM handler to kill idle games */
   signal(SIGALRM, game_idle_kill);
   for (;;)
@@ -407,7 +409,10 @@ dooutput (int max_idle_time)
       default:
           h.len = cc;
           gettimeofday (&h.tv, NULL);
-          (void) write (1, obuf, cc);
+          {
+              ssize_t n = write (1, obuf, cc);
+              (void)n; /* Terminal output - continue on error */
+          }
           (void) write_header (fscript, &h);
           (void) fwrite (obuf, 1, cc, fscript);
           break;
@@ -444,7 +449,10 @@ dooutput (int max_idle_time)
           }
           h.len = len = out - ubuf;
           gettimeofday(&h.tv, NULL);
-          write(1, ubuf, len);
+          {
+              ssize_t n = write(1, ubuf, len);
+              (void)n; /* Terminal output - continue on error */
+          }
           write_header(fscript, &h);
           fwrite(ubuf, 1, len, fscript);
           break;
@@ -465,7 +473,10 @@ dooutput (int max_idle_time)
           }
           h.len = len = out - ubuf;
           gettimeofday(&h.tv, NULL);
-          write(1, ubuf, len);
+          {
+              ssize_t n = write(1, ubuf, len);
+              (void)n; /* Terminal output - continue on error */
+          }
           write_header(fscript, &h);
           fwrite(ubuf, 1, len, fscript);
           break;
@@ -477,6 +488,8 @@ dooutput (int max_idle_time)
 void
 doshell (int game, char *username)
 {
+  (void)game; /* unused */
+  (void)username; /* unused */
   getslave ();
   (void) close (master);
   (void) fclose (fscript);
@@ -527,14 +540,11 @@ fail ()
 }
 
 void
-done ()
+done (void)
 {
-  time_t tvec, time ();
-  char *ctime ();
-
   if (subchild)
     {
-      tvec = time ((time_t *) NULL);
+      /* tvec = time ((time_t *) NULL); -- value not used */
       (void) fclose (fscript);
       (void) close (master);
     }
@@ -625,6 +635,7 @@ static void call_print_charset(char *exe, char **args)
 
 static void query_encoding(int game, char *username)
 {
+    (void)username; /* unused */
     int son;
     int p[2];
     int null;
@@ -639,6 +650,7 @@ static void query_encoding(int game, char *username)
     case -1:
         perror("fork");
         fail();
+        break;
     case 0:
         null = open("/dev/null", O_RDONLY);
         if (null != -1)
@@ -665,7 +677,9 @@ static void query_encoding(int game, char *username)
     if (select(p[0]+1,&se,NULL,NULL,&tv) != 1)
     {
         fprintf(stderr, "Error: can't obtain charset info.\nPress any key...\n");
-        read(0, buf, 1);
+        if (read(0, buf, 1) < 0) {
+            /* Ignore read error on keypress wait */
+        }
         close(p[0]); // SIGPIPE
         kill(son, SIGTERM); // and SIGTERM for a good measure
         waitpid(son, 0, 0);
@@ -675,7 +689,9 @@ static void query_encoding(int game, char *username)
 
     // Sending _one_ short message over a pipe is atomic on all systems I know.
     // Don't assume this on about any other file descriptor.
-    read(p[0], buf, sizeof(buf)-1);
+    if (read(p[0], buf, sizeof(buf)-1) < 0) {
+        buf[0] = '\0';  /* Default to empty on read error */
+    }
     buf[sizeof(buf)-1] = 0;
     close(p[0]);
     kill(son, SIGTERM);
@@ -686,6 +702,8 @@ static void query_encoding(int game, char *username)
     if (ancient_encoding == -1)
     {
         fprintf(stderr, "Error: unknown encoding \"%s\"\nPress any key...\n", buf);
-        read(0, buf, 1);
+        if (read(0, buf, 1) < 0) {
+            /* Ignore read error on keypress wait */
+        }
     }
 }

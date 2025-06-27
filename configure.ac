@@ -48,7 +48,7 @@ AC_PATH_PROG(MAKEDEPEND, makedepend)
 AC_MSG_CHECKING([how to generate dependency info])
 
 if test "$ac_cv_c_compiler_gnu" = yes; then
-  CFLAGS="$CFLAGS -Wall -Wno-unused $PTHREAD_CFLAGS"
+  CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
   MKDEP="$CC -MM"
   MKDEP_DIRECT="> .depend"
   AC_MSG_RESULT(gcc)

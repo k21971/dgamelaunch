@@ -68,14 +68,15 @@ static int got_sigwinch = 0;
 static int term_resizex = -1;
 static int term_resizey = -1;
 
-void
+static void
 ttyplay_sigwinch_func(int sig)
 {
+    (void)sig; /* unused */
     signal(SIGWINCH, ttyplay_sigwinch_func);
     got_sigwinch = 1;
 }
 
-struct timeval
+static struct timeval
 timeval_diff (struct timeval tv1, struct timeval tv2)
 {
   struct timeval diff;
@@ -91,7 +92,7 @@ timeval_diff (struct timeval tv1, struct timeval tv2)
   return diff;
 }
 
-struct timeval
+static struct timeval
 timeval_div (struct timeval tv1, double n)
 {
   double x = ((double) tv1.tv_sec + (double) tv1.tv_usec / 1000000.0) / n;
@@ -103,7 +104,7 @@ timeval_div (struct timeval tv1, double n)
   return div;
 }
 
-double
+static double
 ttywait (struct timeval prev, struct timeval cur, double speed)
 {
   struct timeval diff = timeval_diff (prev, cur);
@@ -116,13 +117,16 @@ ttywait (struct timeval prev, struct timeval cur, double speed)
   return speed;
 }
 
-double
+static double
 ttynowait (struct timeval prev, struct timeval cur, double speed)
 {
+  (void)prev; /* unused */
+  (void)cur; /* unused */
+  (void)speed; /* unused */
   return 0;                     /* Speed isn't important. */
 }
 
-int
+static int
 kbhit(void)
 {
     int i = 0;
@@ -138,7 +142,7 @@ kbhit(void)
     return (i);
 }
 
-int
+static int
 ttyplay_keyboard_action(int c)
 {
     struct termios t;
@@ -188,9 +192,10 @@ ttyplay_keyboard_action(int c)
     return (READ_DATA);
 }
 
-int
+static int
 ttyread (FILE * fp, Header * h, char **buf, int pread)
 {
+  (void)pread; /* unused */
   long offset;
   int kb = kbhit();
 
@@ -234,9 +239,10 @@ ttyread (FILE * fp, Header * h, char **buf, int pread)
   return READ_DATA;
 }
 
-int
+static int
 ttypread (FILE * fp, Header * h, char **buf, int pread)
 {
+  (void)pread; /* unused */
   int n;
 #ifdef HAVE_KQUEUE
   struct kevent evt[2];
@@ -331,7 +337,7 @@ ttypread (FILE * fp, Header * h, char **buf, int pread)
   return (action);
 }
 
-void
+static void
 ttywrite (char *buf, int len)
 {
   int i;
@@ -345,13 +351,9 @@ ttywrite (char *buf, int len)
   fwrite (buf, 1, len, stdout);
 }
 
-void
-ttynowrite (char *buf, int len)
-{
-  /* do nothing */
-}
+/* ttynowrite removed - only used in disabled ttyskipall function */
 
-int
+static int
 ttyplay (FILE * fp, double speed, ReadFunc read_func,
          WriteFunc write_func, WaitFunc wait_func, off_t offset)
 {
@@ -482,24 +484,16 @@ find_seek_offset_clrscr (FILE * fp)
   return seek_offset_clrscr;
 }
 
-#if 0 /* not used anymore */
-void
-ttyskipall (FILE * fp)
-{
-  /*
-   * Skip all records.
-   */
-  ttyplay (fp, 0, ttyread, ttynowrite, ttynowait, 0);
-}
-#endif
+/* ttyskipall and ttynowrite removed - disabled code not used anymore */
 
-void
+static void
 ttyplayback (FILE * fp, double speed, ReadFunc read_func, WaitFunc wait_func)
 {
+  (void)read_func; /* unused */
   ttyplay (fp, speed, ttyread, ttywrite, wait_func, 0);
 }
 
-void
+static void
 ttypeek (FILE * fp, double speed)
 {
   int r;

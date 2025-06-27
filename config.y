@@ -23,6 +23,20 @@ int ncnf = 0;
 struct dg_cmdpart *curr_cmdqueue = NULL;
 struct dg_menu *curr_menu = NULL;
 
+const char *SORTMODE_NAME[NUM_SORTMODES] = {
+    "Unsorted",
+    "Username",
+    "Game",
+    "Windowsize",
+    "Starttime",
+    "Duration",
+    "Idletime",
+    "Extrainfo",
+#ifdef USE_SHMEM
+    "Watchers",
+#endif
+};
+
 static struct dg_watchcols *curr_watch_columns[DGL_MAXWATCHCOLS];
 static int curr_n_watch_columns = 0;
 
@@ -368,7 +382,6 @@ menu_definition : TYPE_BANNER_FILE '=' TYPE_VALUE
        | TYPE_CMDQUEUE '[' TYPE_VALUE ']'
          {
              struct dg_menuoption *tmp;
-             struct dg_menuoption *tmpmenuopt;
              if (curr_cmdqueue) {
                  fprintf(stderr, "%s:%d: command queue already in use?\n", config, line);
                  exit(1);

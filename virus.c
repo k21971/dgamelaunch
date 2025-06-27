@@ -85,6 +85,12 @@ char *vi_Version = "0.0.6+dgamelaunch " PACKAGE_VERSION;
 #include <err.h>
 #include <stdarg.h>
 
+/* Helper macro for terminal writes that we don't care about errors */
+#define WRITE_TERM(fd, buf, len) do { \
+    ssize_t _n = write(fd, buf, len); \
+    (void)_n; /* Terminal output - ignore errors */ \
+} while(0)
+
 #include "last_char_is.c"
 #include "strlcat.c"
 #include "strlcpy.c"
@@ -245,7 +251,7 @@ static int file_size (Byte *);  // what is the byte size of "fn"
 static int file_insert (Byte *, Byte *, int);
 static int file_write (Byte *, Byte *, Byte *);
 static void place_cursor (int, int, int);
-static void screen_erase ();
+static void screen_erase (void);
 static void clear_to_eol (void);
 static void clear_to_eos (void);
 static void standout_start (void);  // send "start reverse video" sequence
@@ -282,7 +288,7 @@ static void core_sig (int);     // catch a core dump signal
 #endif /* BB_FEATURE_VI_USE_SIGNALS */
 #ifdef BB_FEATURE_VI_DOT_CMD
 static void start_new_cmd_q (Byte); // new queue for command
-static void end_cmd_q ();       // stop saving input chars
+static void end_cmd_q (void);       // stop saving input chars
 #else /* BB_FEATURE_VI_DOT_CMD */
 #define end_cmd_q()
 #endif /* BB_FEATURE_VI_DOT_CMD */
@@ -715,7 +721,7 @@ static void crash_test()
       // alarm(0);
       sprintf (buf, "\n\n%d: \'%c\' %s\n\n\n%s[Hit return to continue]%s",
                totalcmds, last_input_char, msg, SOs, SOn);
-      write (1, buf, strlen (buf));
+      WRITE_TERM(1, buf, strlen (buf));
       while (read (0, d, 1) > 0) {
           if (d[0] == '\n' || d[0] == '\r')
             break;
@@ -1046,6 +1052,7 @@ key_cmd_mode:
       // dont seperate these two commands. 'f' depends on ';'
       //
       //**** fall thru to ... 'i'
+      /* FALLTHROUGH */
     case ';':                  // ;- look at rest of line for last forward char
 	if (last_forward_char == 0) break;
 	do {
@@ -1250,6 +1257,7 @@ key_cmd_mode:
     case 'A':                  // A- append at e-o-l
       dot_end ();               // go to e-o-l
       //**** fall thru to ... 'a'
+      /* FALLTHROUGH */
     case 'a':                  // a- append after current char
       if (*dot != '\n')
         dot++;
@@ -1302,6 +1310,7 @@ key_cmd_mode:
       dot_begin ();             // 0
       dot_skip_over_ws ();
       //**** fall thru to ... 'i'
+      /* FALLTHROUGH */
     case 'i':                  // i- insert before current char
     case VI_K_INSERT:          // Cursor Key Insert
     dc_i:
@@ -1630,8 +1639,8 @@ static Byte *get_one_address(Byte * p, int *addr)	// get colon addr, if present
           if (*p == '/')
             break;
           *q++ = *p;
-          *q = '\0';
       }
+      *q = '\0';
       pat = (Byte *) strdup ((char *) buf); // save copy of pattern
       if (*p == '/')
         p++;
@@ -1773,7 +1782,10 @@ static void colon(Byte * buf)
       place_cursor (rows - 1, 0, FALSE);  // go to Status line
       clear_to_eol ();          // clear the line
       cookmode ();
-      system((char *)orig_buf+1);    // run the cmd
+      if (system((char *)orig_buf+1) == -1) {    // run the cmd
+          const char *errmsg = "\r\nCommand execution failed\r\n";
+          WRITE_TERM(1, errmsg, strlen(errmsg));
+      }
       rawmode ();
       Hit_Return ();            // let user see results
       (void) alarm(3);             // done waiting for input
@@ -1907,18 +1919,18 @@ static void colon(Byte * buf)
       }
       place_cursor (rows - 1, 0, FALSE);  // go to Status line, bottom of screen
       clear_to_eol ();          // clear the line
-      write (1, "\r\n", 2);
+      WRITE_TERM(1, "\r\n", 2);
       for (; q <= r; q++) {
           c = *q;
           if (c > '~')
             standout_start ();
           if (c == '\n') {
-              write (1, "$\r", 2);
+              WRITE_TERM(1, "$\r", 2);
 	  } else if (*q < ' ') {
-              write (1, "^", 1);
+              WRITE_TERM(1, "^", 1);
               c += '@';
 	  }
-          write (1, &c, 1);
+          WRITE_TERM(1, &c, 1);
           if (c > '~')
             standout_end ();
       }
@@ -2170,7 +2182,7 @@ static void Hit_Return(void)
   char c;
 
   standout_start ();            // start reverse video
-  write (1, "[Hit return to continue]", 24);
+  WRITE_TERM(1, "[Hit return to continue]", 24);
   standout_end ();              // end reverse video
   while ((c = get_one_char ()) != '\n' && c != '\r')  /*do nothing */
     ;
@@ -2181,15 +2193,15 @@ static void Hit_Return(void)
 //----- Synchronize the cursor to Dot --------------------------
 static void sync_cursor(Byte * d, int *row, int *col)
 {
-  Byte *beg_cur, *end_cur;      // begin and end of "d" line
-  Byte *beg_scr, *end_scr;      // begin and end of screen
+  Byte *beg_cur;                // begin of "d" line
+  Byte *end_scr;                // end of screen
   Byte *tp;
   int cnt, ro, co;
 
   beg_cur = begin_line (d);     // first char of cur line
-  end_cur = end_line (d);       // last char of cur line
+  /* end_cur = end_line (d); */       // last char of cur line - not used
 
-  beg_scr = end_scr = screenbegin;  // first char of screen
+  /* beg_scr = */ end_scr = screenbegin;  // first char of screen
   end_scr = end_screen ();      // last char of screen
 
   if (beg_cur < screenbegin) {
@@ -2644,11 +2656,15 @@ static Byte *char_insert(Byte * p, Byte c)  // insert the char c at 'p'
       }
   } else {
       // insert a char into text[]
+#ifdef BB_FEATURE_VI_SETOPTS
       Byte *sp;                 // "save p"
+#endif
 
       if (c == 13)
         c = '\n';               // translate \r to \n
+#ifdef BB_FEATURE_VI_SETOPTS
       sp = p;                   // remember addr of insert
+#endif
       p = stupid_insert (p, c); // insert the char
 #ifdef BB_FEATURE_VI_SETOPTS
       if (showmatch && strchr (")]}", *sp) != NULL) {
@@ -3023,7 +3039,7 @@ static void start_new_cmd_q(Byte c)
   return;
 }
 
-static void end_cmd_q()
+static void end_cmd_q(void)
 {
 #ifdef BB_FEATURE_VI_YANKMARK
   YDreg = 26;                   // go back to default Yank/Delete reg
@@ -3078,9 +3094,7 @@ static Byte *text_yank(Byte * p, Byte * q, int dest)  // copy text into a regist
 static Byte what_reg(void)
 {
   Byte c;
-  int i;
 
-  i = 0;
   c = 'D';                      // default to D-reg
   if (0 <= YDreg && YDreg <= 25)
     c = 'a' + (Byte) YDreg;
@@ -3158,6 +3172,7 @@ static void cookmode(void)
 //----- See what the window size currently is --------------------
 static void window_size_get(int sig)
 {
+  (void)sig; /* unused */
   int i;
 
   i = ioctl (0, TIOCGWINSZ, &winsize);
@@ -3264,7 +3279,8 @@ static int mysleep(int hund)              // sleep for 'h' 1/100 seconds
 static Byte readit(void)                   // read (maybe cursor) key from stdin
 {
   Byte c;
-  int i, bufsiz, cnt, cmdindex;
+  int i, bufsiz, cnt;
+  size_t cmdindex;
   struct esc_cmds {
     Byte *seq;
     Byte val;
@@ -3434,7 +3450,7 @@ static Byte *get_input_line(Byte * prompt)  // get input line- use "status line"
   *status_buffer = '\0';        // clear the status buffer
   place_cursor (rows - 1, 0, FALSE);  // go to Status line, bottom of screen
   clear_to_eol ();              // clear the line
-  write (1, prompt, strlen ((char *) prompt));  // write out the :, /, or ? prompt
+  WRITE_TERM(1, prompt, strlen ((char *) prompt));  // write out the :, /, or ? prompt
 
   for (i = strlen ((char *) buf); i < BUFSIZ;) {
       c = get_one_char ();      // read user input
@@ -3444,14 +3460,14 @@ static Byte *get_input_line(Byte * prompt)  // get input line- use "status line"
           i--;                  // backup to prev char
           buf[i] = '\0';        // erase the char
           buf[i + 1] = '\0';    // null terminate buffer
-          write (1, " ", 3);      // erase char on screen
+          WRITE_TERM(1, " ", 3);      // erase char on screen
           if (i <= 0) {	// user backs up before b-o-l, exit
               break;
 	  }
       } else {
           buf[i] = c;           // save char in buffer
           buf[i + 1] = '\0';    // make sure buffer is null terminated
-          write (1, buf + i, 1);  // echo the char back to user
+          WRITE_TERM(1, buf + i, 1);  // echo the char back to user
           i++;
       }
   }
@@ -3467,7 +3483,7 @@ static int file_size(Byte * fn)           // what is the byte size of "fn"
   struct stat st_buf;
   int cnt, sr;
 
-  if (fn == 0 || strlen (fn) <= 0)
+  if (fn == 0 || strlen ((char *) fn) <= 0)
     return (-1);
   cnt = -1;
   sr = stat ((char *) fn, &st_buf); // see if file exists
@@ -3599,7 +3615,10 @@ static void place_cursor(int row, int col, int opti)
   if (col >= columns) col = columns - 1;
 
   //----- 1.  Try the standard terminal ESC sequence
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
   sprintf ((char *) cm1, CMrc, row + 1, col + 1);
+#pragma GCC diagnostic pop
   cm = cm1;
   if (opti == FALSE) goto pc0;
 
@@ -3640,31 +3659,31 @@ static void place_cursor(int row, int col, int opti)
 #endif /* BB_FEATURE_VI_OPTIMIZE_CURSOR */
 pc0:
   l = strlen (cm);
-  if (l) write (1, cm, l);           // move the cursor
+  if (l) WRITE_TERM(1, cm, l);           // move the cursor
 }
 
 //----- Erase from cursor to end of line -----------------------
 static void clear_to_eol()
 {
-  write (1, Ceol, strlen (Ceol)); // Erase from cursor to end of line
+  WRITE_TERM(1, Ceol, strlen (Ceol)); // Erase from cursor to end of line
 }
 
 //----- Erase from cursor to end of screen -----------------------
 static void clear_to_eos()
 {
-  write (1, Ceos, strlen (Ceos)); // Erase from cursor to end of screen
+  WRITE_TERM(1, Ceos, strlen (Ceos)); // Erase from cursor to end of screen
 }
 
 //----- Start standout mode ------------------------------------
 static void standout_start()               // send "start reverse video" sequence
 {
-  write (1, SOs, strlen (SOs)); // Start reverse video mode
+  WRITE_TERM(1, SOs, strlen (SOs)); // Start reverse video mode
 }
 
 //----- End standout mode --------------------------------------
 static void standout_end()                 // send "end reverse video" sequence
 {
-  write (1, SOn, strlen (SOn)); // End reverse video mode
+  WRITE_TERM(1, SOn, strlen (SOn)); // End reverse video mode
 }
 
 //----- Flash the screen  --------------------------------------
@@ -3679,11 +3698,12 @@ static void flash(int h)
 
 static void beep()
 {
-  write (1, bell, strlen (bell)); // send out a bell character
+  WRITE_TERM(1, bell, strlen (bell)); // send out a bell character
 }
 
 static void indicate_error(char c)
 {
+  (void)c; /* unused */
 #ifdef BB_FEATURE_VI_CRASHME
   if (crashme > 0)
     return;                     // generate a random command
@@ -3697,7 +3717,7 @@ static void indicate_error(char c)
 
 //----- Screen[] Routines --------------------------------------
 //----- Erase the Screen[] memory ------------------------------
-static void screen_erase()
+static void screen_erase(void)
 {
   memset (screen, ' ', screensize); // clear new screen
 }
@@ -3714,7 +3734,7 @@ static void show_status_line(void)
   if (cnt > 0 && last_cksum != cksum) {
       last_cksum = cksum;       // remember if we have seen this line
       place_cursor (rows - 1, 0, FALSE);  // put cursor on status line
-      write (1, status_buffer, cnt);
+      WRITE_TERM(1, status_buffer, cnt);
       clear_to_eol ();
       place_cursor (crow, ccol, FALSE); // put cursor back in correct place
   }
@@ -3924,7 +3944,7 @@ static void refresh(int full_screen)
 	  }
 
           // write line out to terminal
-          write (1, sp + cs, ce - cs + 1);
+          WRITE_TERM(1, sp + cs, ce - cs + 1);
 #ifdef BB_FEATURE_VI_OPTIMIZE_CURSOR
           last_row = li;
 #endif /* BB_FEATURE_VI_OPTIMIZE_CURSOR */

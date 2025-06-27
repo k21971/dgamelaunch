@@ -94,7 +94,7 @@
 #include <termios.h>
 
 extern FILE* yyin;
-extern int yyparse ();
+extern int yyparse (void);
 
 /* global variables */
 
@@ -151,20 +151,20 @@ int color_remap[16] = {
 
 static struct dg_watchcols *default_watchcols_list[DGL_MAXWATCHCOLS + 1];
 
-struct dg_user *
-cpy_me(struct dg_user *me)
+static struct dg_user *
+cpy_me(struct dg_user *user)
 {
     struct dg_user *tmp = malloc(sizeof(struct dg_user));
 
-    if (tmp && me) {
+    if (tmp && user) {
 #ifdef USE_SQLITE3
-	tmp->id = me->id;
+	tmp->id = user->id;
 #endif
-	if (me->username) tmp->username = strdup(me->username);
-	if (me->email)    tmp->email    = strdup(me->email);
-	if (me->env)      tmp->env      = strdup(me->env);
-	if (me->password) tmp->password = strdup(me->password);
-	tmp->flags = me->flags;
+	if (user->username) tmp->username = strdup(user->username);
+	if (user->email)    tmp->email    = strdup(user->email);
+	if (user->env)      tmp->env      = strdup(user->env);
+	if (user->password) tmp->password = strdup(user->password);
+	tmp->flags = user->flags;
     }
     return tmp;
 }
@@ -312,7 +312,7 @@ gen_inprogress_lock (int game, pid_t pid, char* ttyrec_filename)
     graceful_exit (68);
   }
 
-  if (write (fd, filebuf, wrlen) != wrlen) {
+  if (write (fd, filebuf, wrlen) != (ssize_t)wrlen) {
       debug_write("inprogress-lock write");
       graceful_exit(70);
   }
@@ -330,6 +330,7 @@ char *hup_shm_ttyrec_fn = NULL;
 void
 catch_sighup (int signum)
 {
+  (void)signum; /* unused */
   if (child)
     {
       sleep (10);
@@ -374,6 +375,7 @@ dgl_getch(void)
 static void
 dgl_idle_kill(int signal)
 {
+  (void)signal; /* unused */
     kill(0, SIGHUP);
 }
 
@@ -397,7 +399,7 @@ idle_alarm_reset(void)
 /* ************************************************************* */
 
 
-char *
+static char *
 bannerstr_substprefs(char *buf, char *bufnew, int buflen)
 {
     char *src = buf;
@@ -451,7 +453,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
     return bufnew;
 }
 
-char *
+static char *
 bannerstrmangle(char *buf, char *bufnew, int buflen, char *fromstr, char *tostr)
 {
     char *loc;
@@ -512,7 +514,7 @@ banner_var_free()
     globalconfig.banner_var_list = NULL;
 }
 
-char *
+static char *
 banner_var_resolve(struct dg_banner_var *bv)
 {
   static char tmpbuf[DGL_BANNER_LINELEN+1];
@@ -522,7 +524,10 @@ banner_var_resolve(struct dg_banner_var *bv)
   if (!bv->special) return bv->value;
   time(&tstamp);
   ptm = gmtime(&tstamp);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
   strftime(tmpbuf, DGL_BANNER_LINELEN, bv->value, ptm);
+#pragma GCC diagnostic pop
   return tmpbuf;
 }
 
@@ -537,7 +542,7 @@ banner_var_value(char *name)
     return NULL;
 }
 
-void
+static void
 freebanner(struct dg_banner *ban)
 {
     unsigned int l;
@@ -553,7 +558,7 @@ freebanner(struct dg_banner *ban)
     ban->lines = NULL;
 }
 
-void
+static void
 banner_addline(struct dg_banner *ban, char *line)
 {
     size_t len = strlen(line);
@@ -563,7 +568,7 @@ banner_addline(struct dg_banner *ban, char *line)
     if (len >= DGL_BANNER_LINELEN) {
 	len = DGL_BANNER_LINELEN;
 	ban->lines[ban->len - 1] = malloc(len);
-	strncpy(ban->lines[ban->len - 1], line, len);
+	strncpy(ban->lines[ban->len - 1], line, len - 1);
 	ban->lines[ban->len - 1][len-1] = '\0';
     } else
 	ban->lines[ban->len - 1] = strdup(line);
@@ -600,6 +605,7 @@ loadbanner (char *fname, struct dg_banner *ban)
       if ((slen > 0) && (buf[slen-1] == '\n')) buf[slen-1] = '\0';
 
       strncpy(bufnew, buf, DGL_BANNER_LINELEN);
+      bufnew[DGL_BANNER_LINELEN - 1] = '\0';
       if (strstr(bufnew, "$INCLUDE(")) {
 	  char *fn = bufnew + 9;
 	  char *fn_end = strchr(fn, ')');
@@ -714,6 +720,8 @@ shm_sem_wait(struct dg_shm *shm_dg_data)
 	debug_write("sem_wait");
 	graceful_exit(77);
     }
+#else
+    (void)shm_dg_data; /* unused without USE_SHMEM */
 #endif
 }
 
@@ -725,6 +733,8 @@ shm_sem_post(struct dg_shm *shm_dg_data)
 	debug_write("sem_post");
 	graceful_exit(78);
     }
+#else
+    (void)shm_dg_data; /* unused without USE_SHMEM */
 #endif
 }
 
@@ -775,6 +785,10 @@ shm_update(struct dg_shm *shm_dg_data, struct dg_game **games, int len)
 
     shm_sem_post(shm_dg_data);
     signals_release();
+#else
+    (void)shm_dg_data; /* unused without USE_SHMEM */
+    (void)games; /* unused without USE_SHMEM */
+    (void)len; /* unused without USE_SHMEM */
 #endif
 }
 
@@ -790,6 +804,9 @@ shm_mk_keys(key_t *shm_key, key_t *shm_sem_key)
 	debug_write("ftok shm_sem_key");
 	graceful_exit(72);
     }
+#else
+    (void)shm_key; /* unused without USE_SHMEM */
+    (void)shm_sem_key; /* unused without USE_SHMEM */
 #endif
 }
 
@@ -858,6 +875,9 @@ shm_init(struct dg_shm **shm_dg_data, struct dg_shm_game **shm_dg_game)
 	  graceful_exit(76);
       }
   }
+#else
+  (void)shm_dg_data; /* unused without USE_SHMEM */
+  (void)shm_dg_game; /* unused without USE_SHMEM */
 #endif /* USE_SHMEM */
 }
 
@@ -898,13 +918,13 @@ shm_dump()
 
 static
 struct dg_watchcols **
-globalconfig_watch_columns()
+globalconfig_watch_columns(void)
 {
     if (globalconfig.n_watch_columns)
         return globalconfig.watch_columns;
 
     if (!*default_watchcols_list) {
-        int i;
+        size_t i;
         for (i = 0; i < ARRAY_SIZE(default_watchcols); ++i)
             default_watchcols_list[i] = &default_watchcols[i];
     }
@@ -958,7 +978,7 @@ sortmode_increment(struct dg_watchcols **watchcols,
         *sortmode = old_sortmode;
 }
 
-char *
+static char *
 get_timediff(time_t ctime, long seconds)
 {
     static char data[32];
@@ -967,7 +987,7 @@ get_timediff(time_t ctime, long seconds)
     secs = (ctime - seconds);
 
     if (showplayers) {
-	snprintf(data, 10, "%ld", secs);
+	snprintf(data, sizeof(data), "%ld", secs);
 	return data;
     }
 
@@ -976,13 +996,13 @@ get_timediff(time_t ctime, long seconds)
     mins = (secs / 60) % 60;
     secs -= (mins*60);
     if (hours)
-	snprintf(data, 10, "%ldh %ldm", hours, mins);
+	snprintf(data, sizeof(data), "%ldh %ldm", hours, mins);
     else if (mins)
-	snprintf(data, 10, "%ldm %lds", mins, secs);
+	snprintf(data, sizeof(data), "%ldm %lds", mins, secs);
     else if (secs > 4)
-	snprintf(data, 10, "%lds", secs);
+	snprintf(data, sizeof(data), "%lds", secs);
     else
-	snprintf(data, 10, " ");
+	snprintf(data, sizeof(data), " ");
     return data;
 }
 
@@ -994,6 +1014,9 @@ game_get_column_data(struct dg_game *game,
                      char *data, int bufsz, int *hilite,
                      dg_sortmode which_data)
 {
+#ifndef USE_SHMEM
+    (void)shm_dg_game; /* unused without USE_SHMEM */
+#endif
     *data = 0;
 
     switch (which_data) {
@@ -1070,10 +1093,11 @@ inprogressmenu (int gameid)
   int i, menuchoice, len = 20, offset = 0;
   static dg_sortmode sortmode = NUM_SORTMODES;
   struct dg_game **games = NULL;
-  char ttyrecname[130], gametype[10], idletime[10];
-  sigset_t oldmask, toblock;
+  char ttyrecname[130];
   int idx = -1;
+#ifdef USE_SHMEM
   int shm_idx = -1;
+#endif
   int max_height = -1;
   int selected = -1;
 
@@ -1137,9 +1161,9 @@ inprogressmenu (int gameid)
 	      char *col = wcol->colname;
 	      int x = wcol->x;
 	      while (*col == ' ') { x++; col++; }
-	      if (sortmode == wcol->sortmode) attron(title_attr);
-	      mvprintw(top_banner_hei, x, col);
-	      if (sortmode == wcol->sortmode) attroff(title_attr);
+	      if (sortmode == (dg_sortmode)wcol->sortmode) attron(title_attr);
+	      mvprintw(top_banner_hei, x, "%s", col);
+	      if (sortmode == (dg_sortmode)wcol->sortmode) attroff(title_attr);
 	  }
       }
 
@@ -1165,7 +1189,10 @@ inprogressmenu (int gameid)
                                    tmpbuf, sizeof tmpbuf, &hilite,
                                    (dg_sortmode)col->dat);
 	      if (hilite) attron(hilite);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 	      mvprintw(top_banner_hei + 1 + i, col->x, col->fmt, tmpbuf);
+#pragma GCC diagnostic pop
 	      if (hilite) {
 		  attron(CLR_NORMAL);
 		  hilite = 0;
@@ -1280,7 +1307,10 @@ inprogressmenu (int gameid)
 	    break;
 
 	case 12: case 18: /* ^L, ^R */
-          if (globalconfig.utf8esc) (void) write(1, "\033%G", 3);
+          if (globalconfig.utf8esc) {
+              ssize_t n = write(1, "\033%G", 3);
+              (void)n; /* Terminal control sequence - ignore errors */
+          }
 	  clear ();
 	  break;
 
@@ -1319,7 +1349,10 @@ watchgame:
               clear ();
               refresh ();
               endwin ();
-	      if (globalconfig.utf8esc) (void) write(1, "\033%G", 3);
+	      if (globalconfig.utf8esc) {
+	          ssize_t n = write(1, "\033%G", 3);
+	          (void)n; /* Terminal control sequence - ignore errors */
+	      }
 #ifdef USE_SHMEM
 	      signals_block();
 	      if (games[idx]->is_in_shm) {
@@ -1343,7 +1376,7 @@ watchgame:
 	      else
 		  setproctitle("<Anonymous> [watching %s]", chosen_name);
               if (myconfig[games[idx]->gamenum]->watch_path) {
-                  pid_t child;
+                  pid_t watch_child;
                   int gnum = games[idx]->gamenum;
                   char **wargs = (char **)malloc(sizeof(char *) * (myconfig[gnum]->num_wargs+1));
                   dgl_exec_cmdqueue_w(myconfig[gnum]->watchcmdqueue, gnum, me, chosen_name);
@@ -1359,12 +1392,12 @@ watchgame:
                   signal(SIGTERM, SIG_DFL);
                   idle_alarm_set_enabled(0);
                   /* launch program */
-                  child = fork();
-                  if (child < 0) {
+                  watch_child = fork();
+                  if (watch_child < 0) {
                       perror ("fork");
                       fail ();
                   }
-                  if (child == 0) {
+                  if (watch_child == 0) {
                       execvp (myconfig[gnum]->watch_path, wargs);
                   } else {
                       int status;
@@ -1433,14 +1466,13 @@ leavewatchgame:
 #endif
 }
 
-void
+static void
 inprogressdisplay (int gameid)
 {
     const char *selectorchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ";
   int i, len = 20;
   static dg_sortmode sortmode = NUM_SORTMODES;
   struct dg_game **games = NULL;
-  int shm_idx = -1;
 
   time_t ctime;
 
@@ -1500,7 +1532,7 @@ inprogressdisplay (int gameid)
  * Doesn't recognize addresses with parts in double-quotes.
  * Addresses with a colon in them are always rejected.
  */
-int
+static int
 check_email (char *s)
 {
   char *atomchars = "!#$%&'*+-/=?^_`{|}~" "0123456789"
@@ -1676,7 +1708,7 @@ changepw (int dowrite)
 
 /* ************************************************************* */
 
-void
+static void
 wall_email(char *from, char *msg)
 {
     int len, i;
@@ -1714,7 +1746,6 @@ wall_email(char *from, char *msg)
 
     for (i = 0; i < len; i++) {
 	int game = games[i]->gamenum;
-	int fnamelen;
 	if (strlen(myconfig[game]->spool) < 1) continue;
 
 	snprintf (spool_fn, 1024, "%s/%s", myconfig[game]->spool, games[i]->name);
@@ -1894,7 +1925,10 @@ initcurses ()
   init_pair(10, COLOR_BLACK, COLOR_BLACK);
   init_pair(11, -1, -1);
 
-  if (globalconfig.utf8esc) (void) write(1, "\033%G", 3);
+  if (globalconfig.utf8esc) {
+      ssize_t n = write(1, "\033%G", 3);
+      (void)n; /* Terminal control sequence - ignore errors */
+  }
 #endif
   clear();
   refresh();
@@ -2008,14 +2042,14 @@ loginprompt (int from_ttyplay)
 void
 newuser ()
 {
-  char buf[1024], dirname[100];
+  char buf[1024];
   int error = 2;
   unsigned int i;
 
   loggedin = 0;
 
 #ifndef USE_SQLITE3
-  if (f_num >= globalconfig.max)
+  if ((unsigned int)f_num >= globalconfig.max)
   {
       clear ();
 
@@ -2173,8 +2207,8 @@ passwordgood (char *cpw)
 
 /* ************************************************************* */
 
-void
-freeprefs()
+static void
+freeprefs(void)
 {
     struct userpref *cpref;
     for (cpref = userprefs; cpref; ) {
@@ -2291,7 +2325,7 @@ setpref(char *key, char *val)
     return TRUE;
 }
 
-void
+static void
 delpref(char *key)
 {
     struct userpref *cpref = userprefs;
@@ -2352,7 +2386,7 @@ readfile (int nolock)
   fl.l_start = 0;
   fl.l_len = 0;
 
-  memset (buf, 1024, 0);
+  memset (buf, 0, 1024);
 
   /* read new stuff */
 
@@ -2447,7 +2481,7 @@ readfile (int nolock)
 
       f_num++;
       /* prevent a buffer overrun here */
-      if (f_num > globalconfig.max)
+      if ((unsigned int)f_num > globalconfig.max)
       {
 	fprintf(stderr,"ERROR: number of users in database exceeds maximum. Exiting.\n");
 	debug_write("too many users in database");
@@ -2694,7 +2728,7 @@ writefile (int requirenew)
     }
   if (loggedin && !my_done)
     {                           /* new entry */
-      if (f_num < globalconfig.max)
+      if ((unsigned int)f_num < globalconfig.max)
         fprintf (fp, "%s:%s:%s:%s\n", me->username, me->email, me->password,
                  me->env);
       else /* Oops, someone else registered the last available slot first */
@@ -2775,7 +2809,6 @@ purge_stale_locks (int game)
       char *colon, *fn, *inprogdir = NULL;
       char buf[16];
       pid_t pid;
-      size_t len;
       int seconds = 0;
 
       if (!strcmp (dent->d_name, ".") || !strcmp (dent->d_name, ".."))
@@ -2787,7 +2820,7 @@ purge_stale_locks (int game)
 	  debug_write("purge_stale_locks !colon");
         graceful_exit (201);
       }
-      if (colon - dent->d_name != strlen(me->username))
+      if (colon - dent->d_name != (ptrdiff_t)strlen(me->username))
         continue;
       if (strncmp (dent->d_name, me->username, colon - dent->d_name))
         continue;
@@ -2906,12 +2939,15 @@ runmenuloop(struct dg_menu *menu)
 	term_resize_check();
 	if (doclear) {
 	    doclear = 0;
-	    if (globalconfig.utf8esc) (void) write(1, "\033%G", 3);
+	    if (globalconfig.utf8esc) {
+	        ssize_t n = write(1, "\033%G", 3);
+	        (void)n; /* Terminal control sequence - ignore errors */
+	    }
 	    clear();
 	}
 	drawbanner(&ban);
 	if (menu->cursor_x >= 0 && menu->cursor_y >= 0)
-	    mvprintw(menu->cursor_y, menu->cursor_x, "");
+	    move(menu->cursor_y, menu->cursor_x);
 	refresh();
 	userchoice = dgl_getch();
 	if (userchoice == ERR) {
@@ -2953,11 +2989,8 @@ int
 main (int argc, char** argv)
 {
   /* for chroot and program execution */
-    char atrcfilename[81], *p, *auth = NULL;
-  unsigned int len;
+    char *p, *auth = NULL;
   int c, i;
-  int userchoice;
-  char *tmp;
   char *wall_email_str = NULL;
 #ifdef USE_RLIMIT
   struct rlimit lim;
@@ -2966,9 +2999,6 @@ main (int argc, char** argv)
 #ifndef HAVE_SETPROCTITLE
   /* save argc, argv */
   char** saved_argv;
-  int saved_argc;
-
-  saved_argc = argc;
 
   saved_argv = malloc(sizeof(char**) * (argc + 1));
   for (i = 0; i < argc; i++)
@@ -3063,8 +3093,8 @@ main (int argc, char** argv)
 
   while (optind < argc)
   {
-    size_t len = strlen(argv[optind]);
-    memset(argv[optind++], 0, len);
+    size_t arg_len = strlen(argv[optind]);
+    memset(argv[optind++], 0, arg_len);
   }
   setproctitle("<Anonymous>");
 
@@ -3209,17 +3239,17 @@ main (int argc, char** argv)
 
   if (auth)
   {
-    char *user, *pass, *p;
+    char *user, *pass, *auth_p;
 
-    p = strchr(auth, ':');
+    auth_p = strchr(auth, ':');
 
-    if (p)
+    if (auth_p)
     {
-      pass = p + 1;
+      pass = auth_p + 1;
 
       if (*pass != '\0')
       {
-        *p = '\0';
+        *auth_p = '\0';
         user = auth;
         autologin(user, pass);
       }
