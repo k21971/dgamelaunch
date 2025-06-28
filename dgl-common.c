@@ -97,7 +97,6 @@ check_retard(int reset)
     return ((retardation > 20) ? 1 : 0);
 }
 
-
 struct dg_menu *
 dgl_find_menu(const char *menuname)
 {
@@ -236,7 +235,7 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 		while (*p != '\0')
 		    p++;
 		break;
-  	    default:
+	    default:
 		*p = *f;
 		if (p < end)
 		    p++;
@@ -572,7 +571,6 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
     return 0;
 }
 
-
 int
 dgl_exec_cmdqueue(struct dg_cmdpart *queue, int game, struct dg_user *me)
 {
@@ -701,7 +699,7 @@ debug_write(const char *str)
 {
     FILE *fp;
     const char *debug_path;
-    
+
     /* Use configured path, or fallback to default */
     if (globalconfig.debuglogfile && globalconfig.debuglogfile[0] != '\0') {
         debug_path = globalconfig.debuglogfile;
@@ -712,7 +710,7 @@ debug_write(const char *str)
         /* Non-chroot mode (test environment), use /tmp */
         debug_path = "/tmp/dgldebug.log";
     }
-    
+
     fp = fopen(debug_path, "a");
     if (!fp) return;
     fprintf(fp, "%s\n", str);

@@ -4,11 +4,9 @@
 # to the new sqlite3 database.
 #
 
-
 TEMPFILE="dgl-login.tmp"
 FLATDB="dgl-login"
 DBFILE="dgamelaunch.db"
-
 
 if [ -e "$TEMPFILE" ]; then
     echo "$TEMPFILE already exists.";
@@ -22,7 +20,6 @@ if [ ! -e "$FLATDB" ]; then
     echo "$FLATDB does not exist.";
     exit;
 fi
-
 
 sqlite3 "$DBFILE" "create table dglusers (id integer primary key, username text, email text, env text, password text, flags integer);"
 

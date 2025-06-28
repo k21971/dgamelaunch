@@ -7,7 +7,7 @@ echo "=== dgamelaunch Zork I Setup Script ==="
 echo
 
 # Check if running as root (needed for chroot setup)
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
     echo "This script needs to be run as root for chroot setup."
     echo "Usage: sudo $0"
     exit 1

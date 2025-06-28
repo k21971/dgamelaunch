@@ -255,11 +255,9 @@ struct dg_globalconfig
 
     struct dg_menulist *menulist;
     int menu_max_idle_time;
-    
+
     char *debuglogfile; /* path to debug log file (when USE_DEBUGFILE) */
 };
-
-
 
 /* Global variables */
 extern int shm_n_games; /* TODO: make configurable */

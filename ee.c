@@ -29,7 +29,7 @@
  |	other company.  No support is implied or offered with this software.
  |	You've got the source, and you're on your own.
  |
- |	This software may be distributed under the terms of Larry Wall's 
+ |	This software may be distributed under the terms of Larry Wall's
  |	Artistic license, a copy of which is included in this distribution.
  |
  |	This notice must be included with this software and any derivatives.
@@ -143,7 +143,7 @@ int get_fd;			/* file descriptor for reading a file	*/
 int info_window = TRUE;		/* flag to indicate if help window visible */
 int info_type = CONTROL_KEYS;	/* flag to indicate type of info to display */
 int expand_tabs = TRUE;		/* flag for expanding tabs		*/
-int right_margin = 0;		/* the right margin 			*/
+int right_margin = 0;		/* the right margin			*/
 int observ_margins = TRUE;	/* flag for whether margins are observed */
 int out_pipe;			/* flag that info is piped out		*/
 int in_pipe;			/* flag that info is piped in		*/
@@ -188,7 +188,6 @@ WINDOW *info_win;
 #define P_(s) ()
 #endif
 
-
 /*
  |	The following structure allows menu items to be flexibly declared.
  |	The first item is the string describing the selection, the second
@@ -196,7 +195,7 @@ WINDOW *info_win;
  |	and the third is the argument for the procedure.
  |
  |	For those systems with i18n, the string should be accompanied by a
- |	catalog number.  The 'int *' should be replaced with 'void *' on 
+ |	catalog number.  The 'int *' should be replaced with 'void *' on
  |	systems with that type.
  |
  |	The first menu item will be the title of the menu, with NULL
@@ -296,9 +295,9 @@ void strings_init(void);
  */
 
 struct menu_entries leave_menu[] = {
-	{L"", NULL, NULL, NULL, NULL, -1}, 
-	{L"", NULL, NULL, NULL, ee_finish, -1}, 
-	{L"", NULL, NULL, quit, NULL, TRUE}, 
+	{L"", NULL, NULL, NULL, NULL, -1},
+	{L"", NULL, NULL, NULL, ee_finish, -1},
+	{L"", NULL, NULL, quit, NULL, TRUE},
 	{NULL, NULL, NULL, NULL, NULL, -1}
 	};
 
@@ -307,19 +306,19 @@ struct menu_entries leave_menu[] = {
 #define SAVE_FILE 3
 
 struct menu_entries search_menu[] = {
-	{L"", NULL, NULL, NULL, NULL, 0}, 
+	{L"", NULL, NULL, NULL, NULL, 0},
 	{L"", NULL, NULL, NULL, search_prompt, -1},
 	{L"", NULL, NULL, search, NULL, TRUE},
 	{NULL, NULL, NULL, NULL, NULL, -1}
 	};
 
 struct menu_entries main_menu[] = {
-	{L"", NULL, NULL, NULL, NULL, -1}, 
-	{L"", NULL, NULL, NULL, leave_op, -1}, 
+	{L"", NULL, NULL, NULL, NULL, -1},
+	{L"", NULL, NULL, NULL, leave_op, -1},
 	{L"", NULL, NULL, NULL, help, -1},
 	{L"", NULL, NULL, file_op, NULL, SAVE_FILE},
-	{L"", NULL, NULL, NULL, redraw, -1}, 
-	{L"", menu_op, search_menu, NULL, NULL, -1}, 
+	{L"", NULL, NULL, NULL, redraw, -1},
+	{L"", menu_op, search_menu, NULL, NULL, -1},
 	{NULL, NULL, NULL, NULL, NULL, -1}
 	};
 
@@ -475,11 +474,11 @@ char *argv[];
 	  tmp_file = strdup(argv[1]);
 	  input_file = recv_file = TRUE;
 	}
-	
+
 	set_up_term();
 	if (right_margin == 0)
 		right_margin = COLS - 1;
-	
+
 	if (!tmp_file)
 	{
 		wprintw(com_win, "%s", no_file_string);
@@ -490,7 +489,7 @@ char *argv[];
 
 	clear_com_win = TRUE;
 
-	while(edit) 
+	while(edit)
 	{
 		int keyt;
 		wrefresh(text_win);
@@ -540,7 +539,7 @@ int rpos;
 {
 	wchar_t *rpoint;
 	int resiz_var;
- 
+
 	rline->max_length += factor;
 	rpoint = rline->line = realloc(rline->line, rline->max_length * sizeof(wchar_t));
 	for (resiz_var = 1 ; (resiz_var < rpos) ; resiz_var++)
@@ -548,7 +547,7 @@ int rpos;
 	return(rpoint);
 }
 
-void 
+void
 insert(character)		/* insert character into line		*/
 int character;			/* new character			*/
 {
@@ -629,7 +628,7 @@ int character;			/* new character			*/
 	draw_line(scr_vert, scr_horz, point, position, curr_line->line_length);
 }
 
-void 
+void
 delete(disp)			/* delete character		*/
 int disp;
 {
@@ -732,7 +731,7 @@ int disp;
 	formatted = FALSE;
 }
 
-void 
+void
 scanline(pos)	/* find the proper horizontal position for the pointer	*/
 wchar_t *pos;
 {
@@ -772,7 +771,7 @@ wchar_t *pos;
 	}
 }
 
-int 
+int
 tabshift(temp_int)		/* give the number of spaces to shift	*/
 int temp_int;
 {
@@ -785,7 +784,7 @@ int temp_int;
 		return (9 - leftover);
 }
 
-int 
+int
 out_char(window, character, column)	/* output non-printing character */
 WINDOW *window;
 int character;
@@ -797,7 +796,7 @@ int column;
 	if (character == TAB)
 	{
 		i1 = tabshift(column);
-		for (i2 = 0; 
+		for (i2 = 0;
 		  (i2 < i1) && (((column+i2+1)-horiz_offset) < last_col); i2++)
 		{
 			waddch(window, ' ');
@@ -818,7 +817,7 @@ int column;
 	return(wcslen(string));
 }
 
-int 
+int
 len_char(character, column)	/* return the length of the character	*/
 wchar_t character;
 int column;	/* the column must be known to provide spacing for tabs	*/
@@ -841,7 +840,7 @@ int column;	/* the column must be known to provide spacing for tabs	*/
 	return(length);
 }
 
-void 
+void
 draw_line(vertical, horiz, ptr, t_pos, length)	/* redraw line from current position */
 int vertical;	/* current vertical position on screen		*/
 int horiz;	/* current horizontal position on screen	*/
@@ -898,7 +897,7 @@ int length;	/* length (in bytes) of line			*/
 	wmove(text_win, vertical, (horiz - horiz_offset));
 }
 
-void 
+void
 insert_line(disp)			/* insert new line		*/
 int disp;
 {
@@ -997,7 +996,7 @@ static int watoi(wchar_t *s)
 	return x;
 }
 
-void 
+void
 prev_word()	/* move to start of previous word in text	*/
 {
 	if (position != 1)
@@ -1018,7 +1017,7 @@ prev_word()	/* move to start of previous word in text	*/
 		left(TRUE);
 }
 
-void 
+void
 control()			/* use control for commands		*/
 {
 	wchar_t *string;
@@ -1089,14 +1088,14 @@ control()			/* use control for commands		*/
 	else if (in == 27)	/* control [ (escape)	*/
 	{
 		menu_op(main_menu);
-	}	
+	}
 }
 
 /*
  |	Emacs control-key bindings
  */
 
-void 
+void
 emacs_control()
 {
 	wchar_t *string;
@@ -1167,10 +1166,10 @@ emacs_control()
 	else if (in == 27)	/* control [ (escape)	*/
 	{
 		menu_op(main_menu);
-	}	
+	}
 }
 
-void 
+void
 bottom()			/* go to bottom of file			*/
 {
 	while (curr_line->next_line != NULL)
@@ -1183,7 +1182,7 @@ bottom()			/* go to bottom of file			*/
 	scr_pos = scr_horz;
 }
 
-void 
+void
 top()				/* go to top of file			*/
 {
 	while (curr_line->prev_line != NULL)
@@ -1196,7 +1195,7 @@ top()				/* go to top of file			*/
 	scr_pos = scr_horz;
 }
 
-void 
+void
 nextline()			/* move pointers to start of next line	*/
 {
 	curr_line = curr_line->next_line;
@@ -1214,7 +1213,7 @@ nextline()			/* move pointers to start of next line	*/
 		scr_vert++;
 }
 
-void 
+void
 prevline()			/* move pointers to start of previous line*/
 {
 	curr_line = curr_line->prev_line;
@@ -1234,7 +1233,7 @@ prevline()			/* move pointers to start of previous line*/
 	}
 }
 
-void 
+void
 left(disp)				/* move left one character	*/
 int disp;
 {
@@ -1263,7 +1262,7 @@ int disp;
 	}
 }
 
-void 
+void
 right(disp)				/* move right one character	*/
 int disp;
 {
@@ -1292,11 +1291,11 @@ int disp;
 			midscreen(scr_vert, point);
 		}
 		wmove(text_win, scr_vert, (scr_horz - horiz_offset));
-		position = 1;	
+		position = 1;
 	}
 }
 
-void 
+void
 find_pos()		/* move to the same column as on other line	*/
 {
 	scr_horz = 0;
@@ -1331,7 +1330,7 @@ find_pos()		/* move to the same column as on other line	*/
 	wmove(text_win, scr_vert, (scr_horz - horiz_offset));
 }
 
-void 
+void
 up()					/* move up one line		*/
 {
 	if (curr_line->prev_line != NULL)
@@ -1342,7 +1341,7 @@ up()					/* move up one line		*/
 	}
 }
 
-void 
+void
 down()					/* move down one line		*/
 {
 	if (curr_line->next_line != NULL)
@@ -1352,7 +1351,7 @@ down()					/* move down one line		*/
 	}
 }
 
-void 
+void
 function_key()				/* process function key		*/
 {
 	if (in == KEY_LEFT)
@@ -1449,13 +1448,13 @@ function_key()				/* process function key		*/
 		{
 			gold = FALSE;
 			command_prompt();
-		} 
+		}
 		else
 			adv_line();
 	}
 }
 
-void 
+void
 command_prompt()
 {
 	wchar_t *cmd_str;
@@ -1588,7 +1587,7 @@ void command(wchar_t *cmd_str1)		/* process commands from keyboard	*/
 		free(cmd_str2);
 }
 
-int 
+int
 scan(const wchar_t *line, int offset, int column)	/* determine horizontal position for get_string	*/
 {
 	const wchar_t *stemp;
@@ -1667,7 +1666,7 @@ get_string(const wchar_t *prompt, int advance)	/* read string from input on comm
 				do
 				{
 					ctrl_v_keyt = wget_wch(com_win, &in);
-				
+
 					if (ctrl_v_keyt == ERR)
 						exit(0);
 				} while (ctrl_v_keyt != OK);
@@ -1701,7 +1700,7 @@ get_string(const wchar_t *prompt, int advance)	/* read string from input on comm
 	return(string);
 }
 
-int 
+int
 compare(wchar_t *string1, const wchar_t *string2, int sensitive)	/* compare two strings	*/
 {
 	wchar_t *strng1;
@@ -1784,7 +1783,7 @@ void goto_line(wchar_t *cmd_str)
 	wmove(text_win, scr_vert, (scr_horz - horiz_offset));
 }
 
-void 
+void
 midscreen(line, pnt)	/* put current line in middle of screen	*/
 int line;
 wchar_t *pnt;
@@ -1805,7 +1804,7 @@ wchar_t *pnt;
 	wmove(text_win, scr_vert, (scr_horz - horiz_offset));
 }
 
-void 
+void
 check_fp()		/* open or close files according to flags */
 {
 	int line_num;
@@ -1818,7 +1817,7 @@ check_fp()		/* open or close files according to flags */
 	tmp_line = curr_line;
 	if (input_file)
 		in_file_name = tmp_file;
-	
+
 	temp = stat(tmp_file, &buf);
 	buf.st_mode &= ~07777;
 	if ((temp != -1) && (buf.st_mode != 0100000) && (buf.st_mode != 0))
@@ -1885,7 +1884,7 @@ check_fp()		/* open or close files according to flags */
 	wrefresh(text_win);
 }
 
-void 
+void
 get_file(file_name)	/* read specified file into current buffer	*/
 char *file_name;
 {
@@ -1957,7 +1956,7 @@ char *file_name;
 	}
 }
 
-void 
+void
 get_line(length, in_str, append)	/* read string and split into lines */
 int length;		/* length of string read by read		*/
 char *in_str;		/* string read by read				*/
@@ -2024,7 +2023,7 @@ int *append;	/* TRUE if must append more text to end of current line	*/
 		}
 		else
 		{
-			point = resiz_line(char_count, curr_line, curr_line->line_length); 
+			point = resiz_line(char_count, curr_line, curr_line->line_length);
 			curr_line->line_length += (char_count - 1);
 		}
 		for (temp_counter = 1; temp_counter < char_count; temp_counter++)
@@ -2040,7 +2039,7 @@ int *append;	/* TRUE if must append more text to end of current line	*/
 	}
 }
 
-void 
+void
 draw_screen()		/* redraw the screen from current postion	*/
 {
 	struct text *temp_line;
@@ -2061,13 +2060,13 @@ draw_screen()		/* redraw the screen from current postion	*/
 	wmove(text_win, scr_vert, (scr_horz - horiz_offset));
 }
 
-void 
+void
 ee_finish()	/* prepare to exit edit session	*/
 {
 	char *file_name = in_file_name;
 
 	/*
-	 |	changes made here should be reflected in the 'save' 
+	 |	changes made here should be reflected in the 'save'
 	 |	portion of file_op()
 	 */
 
@@ -2091,7 +2090,7 @@ ee_finish()	/* prepare to exit edit session	*/
 	}
 }
 
-int 
+int
 quit(noverify)		/* exit editor			*/
 int noverify;
 {
@@ -2108,7 +2107,7 @@ int noverify;
 			return(0);
 		free(ans);
 	}
-	
+
 	if (info_window)
 	  wrefresh(info_win);
 	wrefresh(com_win);
@@ -2118,7 +2117,7 @@ int noverify;
 	exit(0);
 }
 
-void 
+void
 edit_abort(arg)
 int arg;
 {
@@ -2130,7 +2129,7 @@ int arg;
 	exit(1);
 }
 
-void 
+void
 delete_text()
 {
 	while (curr_line->next_line != NULL)
@@ -2150,7 +2149,7 @@ delete_text()
 	position = 1;
 }
 
-/* If fd >= 0, then use the previously opened file. This is a 
+/* If fd >= 0, then use the previously opened file. This is a
    hack to get safe tempfile handling in ispell.*/
 int write_file(char *file_name, int fd)
 {
@@ -2170,7 +2169,7 @@ int write_file(char *file_name, int fd)
 			tmp_point = get_string(file_exists_prompt, TRUE);
 			if (toupper(*tmp_point) == toupper(*yes_char))
 				write_flag = TRUE;
-			else 
+			else
 				write_flag = FALSE;
 			fclose(temp_fp);
 			free(tmp_point);
@@ -2181,7 +2180,7 @@ int write_file(char *file_name, int fd)
 
 	if (write_flag)
 	{
-                if (fd < 0) 
+                if (fd < 0)
                 {
                         temp_fp = fopen(file_name, "w");
                 }
@@ -2234,7 +2233,7 @@ int write_file(char *file_name, int fd)
 		return(FALSE);
 }
 
-int 
+int
 search(display_message)		/* search for string in srch_str	*/
 int display_message;
 {
@@ -2322,7 +2321,7 @@ int display_message;
 				while (position < iter)
 					right(TRUE);
 			}
-			else 
+			else
 			{
 				curr_line = srch_line;
 				point = srch_1;
@@ -2347,7 +2346,7 @@ int display_message;
 	return(found);
 }
 
-void 
+void
 search_prompt()		/* prompt and read search string (srch_str)	*/
 {
 	if (srch_str != NULL)
@@ -2368,7 +2367,7 @@ search_prompt()		/* prompt and read search string (srch_str)	*/
 	search(TRUE);
 }
 
-void 
+void
 del_char()			/* delete current character	*/
 {
 	in = 8;  /* backspace */
@@ -2391,7 +2390,7 @@ del_char()			/* delete current character	*/
 	}
 }
 
-void 
+void
 undel_char()			/* undelete last deleted character	*/
 {
 	if (d_char[0] == '\n')	/* insert line if last del_char deleted eol */
@@ -2408,7 +2407,7 @@ undel_char()			/* undelete last deleted character	*/
 	}
 }
 
-void 
+void
 del_word()			/* delete word in front of cursor	*/
 {
 	int tposit;
@@ -2426,7 +2425,7 @@ del_word()			/* delete word in front of cursor	*/
 	d_word3 = point;
 	d_word2 = d_word;
 	tposit = position;
-	while ((tposit < curr_line->line_length) && 
+	while ((tposit < curr_line->line_length) &&
 				((*d_word3 != ' ') && (*d_word3 != '\t')))
 	{
 		tposit++;
@@ -2434,7 +2433,7 @@ del_word()			/* delete word in front of cursor	*/
 		d_word2++;
 		d_word3++;
 	}
-	while ((tposit < curr_line->line_length) && 
+	while ((tposit < curr_line->line_length) &&
 				((*d_word3 == ' ') || (*d_word3 == '\t')))
 	{
 		tposit++;
@@ -2462,7 +2461,7 @@ del_word()			/* delete word in front of cursor	*/
 	formatted = FALSE;
 }
 
-void 
+void
 undel_word()		/* undelete last deleted word		*/
 {
 	int temp;
@@ -2493,7 +2492,7 @@ undel_word()		/* undelete last deleted word		*/
 	tmp_old_ptr = point;
 	tposit = position;
 	/*
-	 |	copy contents of line from curent position to eol into 
+	 |	copy contents of line from curent position to eol into
 	 |	temp space
 	 */
 	while (tposit < curr_line->line_length)
@@ -2524,7 +2523,7 @@ undel_word()		/* undelete last deleted word		*/
 	draw_line(scr_vert, scr_horz, point, position, curr_line->line_length);
 }
 
-void 
+void
 del_line()			/* delete from cursor to end of line	*/
 {
 	wchar_t *dl1;
@@ -2556,7 +2555,7 @@ del_line()			/* delete from cursor to end of line	*/
 	text_changes = TRUE;
 }
 
-void 
+void
 undel_line()			/* undelete last deleted line		*/
 {
 	wchar_t *ud1;
@@ -2584,7 +2583,7 @@ undel_line()			/* undelete last deleted line		*/
 	draw_line(scr_vert, scr_horz,point,position,curr_line->line_length);
 }
 
-void 
+void
 adv_word()			/* advance to next word		*/
 {
 while ((position < curr_line->line_length) && ((*point != 32) && (*point != 9)))
@@ -2656,7 +2655,7 @@ void move_rel(char direction, int lines)	/* move relative to current line	*/
 	wmove(text_win, scr_vert, (scr_horz - horiz_offset));
 }
 
-void 
+void
 eol()				/* go to end of line			*/
 {
 	if (position < curr_line->line_length)
@@ -2672,7 +2671,7 @@ eol()				/* go to end of line			*/
 	}
 }
 
-void 
+void
 bol()				/* move to beginning of line	*/
 {
 	if (point != curr_line->line)
@@ -2687,7 +2686,7 @@ bol()				/* move to beginning of line	*/
 	}
 }
 
-void 
+void
 adv_line()	/* advance to beginning of next line	*/
 {
 	if ((point != curr_line->line) || (scr_pos > 0))
@@ -2703,7 +2702,7 @@ adv_line()	/* advance to beginning of next line	*/
 	}
 }
 
-void 
+void
 set_up_term()		/* set up the terminal for operating with ae	*/
 {
 	if (!curses_initialized)
@@ -2752,7 +2751,7 @@ set_up_term()		/* set up the terminal for operating with ae	*/
 	local_COLS = COLS;
 }
 
-void 
+void
 resize_check()
 {
 	if ((LINES == local_LINES) && (COLS == local_COLS))
@@ -2783,7 +2782,6 @@ int menu_op(struct menu_entries menu_list[])
 	int top_offset;		/* offset from top where menu items start */
 	int vert_size;		/* vertical size for menu list item display */
 	int off_start = 1;	/* offset from start of menu items to start display */
-
 
 	/*
 	 |	determine number and width of menu items
@@ -2902,10 +2900,10 @@ int menu_op(struct menu_entries menu_list[])
 					if (menu_list[0].argument != MENU_WARN)
 						counter = 0;
 					break;
-				case '\014':	/* ^l       	*/
+				case '\014':	/* ^l      	*/
 				case '\022':	/* ^r, redraw	*/
-					paint_menu(menu_list, max_width, max_height, 
-						list_size, top_offset, temp_win, 
+					paint_menu(menu_list, max_width, max_height,
+						list_size, top_offset, temp_win,
 						off_start, vert_size);
 					break;
 				default:
@@ -2934,19 +2932,19 @@ int menu_op(struct menu_entries menu_list[])
 					if (menu_list[0].argument != MENU_WARN)
 						counter = 0;
 					break;
-				case '\014':	/* ^l       	*/
+				case '\014':	/* ^l      	*/
 				case '\022':	/* ^r, redraw	*/
-					paint_menu(menu_list, max_width, max_height, 
-						list_size, top_offset, temp_win, 
+					paint_menu(menu_list, max_width, max_height,
+						list_size, top_offset, temp_win,
 						off_start, vert_size);
 					break;
 				default:
 					break;
 			}
 		}
-	
-		if (((list_size - off_start) >= (vert_size - 1)) && 
-			(counter > (off_start + vert_size - 3)) && 
+
+		if (((list_size - off_start) >= (vert_size - 1)) &&
+			(counter > (off_start + vert_size - 3)) &&
 				(off_start > 1))
 		{
 			if (counter == list_size)
@@ -2954,11 +2952,11 @@ int menu_op(struct menu_entries menu_list[])
 			else
 				off_start++;
 
-			paint_menu(menu_list, max_width, max_height, 
-				   list_size, top_offset, temp_win, off_start, 
+			paint_menu(menu_list, max_width, max_height,
+				   list_size, top_offset, temp_win, off_start,
 				   vert_size);
 		}
-		else if ((list_size != vert_size) && 
+		else if ((list_size != vert_size) &&
 				(counter > (off_start + vert_size - 2)))
 		{
 			if (counter == list_size)
@@ -2968,8 +2966,8 @@ int menu_op(struct menu_entries menu_list[])
 			else
 				off_start++;
 
-			paint_menu(menu_list, max_width, max_height, 
-				   list_size, top_offset, temp_win, off_start, 
+			paint_menu(menu_list, max_width, max_height,
+				   list_size, top_offset, temp_win, off_start,
 				   vert_size);
 		}
 		else if (counter < off_start)
@@ -2979,8 +2977,8 @@ int menu_op(struct menu_entries menu_list[])
 			else
 				off_start = counter;
 
-			paint_menu(menu_list, max_width, max_height, 
-				   list_size, top_offset, temp_win, off_start, 
+			paint_menu(menu_list, max_width, max_height,
+				   list_size, top_offset, temp_win, off_start,
 				   vert_size);
 		}
 	}
@@ -2990,8 +2988,8 @@ int menu_op(struct menu_entries menu_list[])
 	wrefresh(temp_win);
 	delwin(temp_win);
 
-	if ((menu_list[counter].procedure != NULL) || 
-	    (menu_list[counter].iprocedure != NULL) || 
+	if ((menu_list[counter].procedure != NULL) ||
+	    (menu_list[counter].iprocedure != NULL) ||
 	    (menu_list[counter].nprocedure != NULL))
 	{
 		if (menu_list[counter].argument != -1)
@@ -3009,8 +3007,8 @@ int menu_op(struct menu_entries menu_list[])
 	return(counter);
 }
 
-void 
-paint_menu(menu_list, max_width, max_height, list_size, top_offset, menu_win, 
+void
+paint_menu(menu_list, max_width, max_height, list_size, top_offset, menu_win,
 	   off_start, vert_size)
 struct menu_entries menu_list[];
 int max_width, max_height, list_size, top_offset;
@@ -3022,8 +3020,8 @@ int off_start, vert_size;
 	werase(menu_win);
 
 	/*
-	 |	output top and bottom portions of menu box only if window 
-	 |	large enough 
+	 |	output top and bottom portions of menu box only if window
+	 |	large enough
 	 */
 
 	if (max_height > vert_size)
@@ -3078,11 +3076,11 @@ int off_start, vert_size;
 		else
 			temp_int = 0;
 
-		for (counter = off_start; 
+		for (counter = off_start;
 			((temp_int + counter - off_start) < (vert_size - 1));
 				counter++)
 		{
-			wmove(menu_win, (top_offset + temp_int + 
+			wmove(menu_win, (top_offset + temp_int +
 						(counter - off_start)), 3);
 			if (list_size > 1)
 				wprintw(menu_win, "%c) ", item_alpha[min((counter - 1), max_alpha_char)]);
@@ -3112,7 +3110,7 @@ int off_start, vert_size;
 	}
 }
 
-void 
+void
 help()
 {
 	int counter;
@@ -3123,7 +3121,7 @@ help()
 	for (counter = 0; counter < 22; counter++)
 	{
 		wmove(help_win, counter, 0);
-		waddwstr(help_win, (emacs_keys_mode) ? 
+		waddwstr(help_win, (emacs_keys_mode) ?
 			emacs_help_text[counter] : help_text[counter]);
 	}
 	wrefresh(help_win);
@@ -3142,7 +3140,7 @@ help()
 	redraw();
 }
 
-void 
+void
 paint_info_win()
 {
 	int counter;
@@ -3156,7 +3154,7 @@ paint_info_win()
 		wmove(info_win, counter, 0);
 		wclrtoeol(info_win);
 		if (info_type == CONTROL_KEYS)
-			waddwstr(info_win, (emacs_keys_mode) ? 
+			waddwstr(info_win, (emacs_keys_mode) ?
 			  emacs_control_keys[counter] : control_keys[counter]);
 		else if (info_type == COMMANDS)
 			waddwstr(info_win, command_strings[counter]);
@@ -3169,7 +3167,7 @@ paint_info_win()
 	wrefresh(info_win);
 }
 
-void 
+void
 no_info_window()
 {
 	if (!info_window)
@@ -3187,7 +3185,7 @@ no_info_window()
 	clear_com_win = TRUE;
 }
 
-void 
+void
 create_info_window()
 {
 	if (info_window)
@@ -3209,7 +3207,7 @@ create_info_window()
 	clear_com_win = TRUE;
 }
 
-int 
+int
 file_op(arg)
 int arg;
 {
@@ -3250,7 +3248,7 @@ int arg;
 	return(0);
 }
 
-void 
+void
 leave_op()
 {
 	if (text_changes)
@@ -3261,13 +3259,13 @@ leave_op()
 		quit(TRUE);
 }
 
-void 
+void
 redraw()
 {
 	if (info_window)
         {
                 clearok(info_win, TRUE);
-        	paint_info_win();
+	paint_info_win();
         }
         else
 		clearok(text_win, TRUE);
@@ -3275,17 +3273,17 @@ redraw()
 }
 
 /*
- |	The following routines will "format" a paragraph (as defined by a 
+ |	The following routines will "format" a paragraph (as defined by a
  |	block of text with blank lines before and after the block).
  */
 
-int 
+int
 Blank_Line(test_line)	/* test if line has any non-space characters	*/
 struct text *test_line;
 {
 	wchar_t *line;
 	int length;
-	
+
 	if (test_line == NULL)
 		return(TRUE);
 
@@ -3293,8 +3291,8 @@ struct text *test_line;
 	line = test_line->line;
 
 	/*
-	 |	To handle troff/nroff documents, consider a line with a 
-	 |	period ('.') in the first column to be blank.  To handle mail 
+	 |	To handle troff/nroff documents, consider a line with a
+	 |	period ('.') in the first column to be blank.  To handle mail
 	 |	messages with included text, consider a line with a '>' blank.
 	 */
 
@@ -3312,7 +3310,7 @@ struct text *test_line;
 		return(TRUE);
 }
 
-void 
+void
 echo_string(string)	/* echo the given string	*/
 wchar_t *string;
 {
@@ -3375,7 +3373,7 @@ struct text *test_line;
 		return(0);
 
 	pnt = test_line->line;
-	if ((pnt == NULL) || (*pnt == '\0') || 
+	if ((pnt == NULL) || (*pnt == '\0') ||
 	    (*pnt == '.') || (*pnt == '>'))
 		return(0);
 
@@ -3410,7 +3408,7 @@ wchar_t * string, *substring;
 
 	for (sub = substring; (sub != NULL) && (*sub != '\0'); sub++)
 	{
-		for (full = string; (full != NULL) && (*full != '\0'); 
+		for (full = string; (full != NULL) && (*full != '\0');
 				full++)
 		{
 			if (*sub == *full)
@@ -3421,12 +3419,12 @@ wchar_t * string, *substring;
 }
 
 /*
- |	The following routine tests the input string against the list of 
- |	strings, to determine if the string is a unique match with one of the 
+ |	The following routine tests the input string against the list of
+ |	strings, to determine if the string is a unique match with one of the
  |	valid values.
  */
 
-int 
+int
 unique_test(wchar_t *string, const wchar_t *list[])
 {
 	int counter;
@@ -3446,13 +3444,13 @@ unique_test(wchar_t *string, const wchar_t *list[])
 }
 
 /*
- |	The following is to allow for using message catalogs which allow 
- |	the software to be 'localized', that is, to use different languages 
- |	all with the same binary.  For more information, see your system 
+ |	The following is to allow for using message catalogs which allow
+ |	the software to be 'localized', that is, to use different languages
+ |	all with the same binary.  For more information, see your system
  |	documentation, or the X/Open Internationalization Guide.
  */
 
-void 
+void
 strings_init()
 {
 	leave_menu[0].item_string  = L"leave menu";
@@ -3467,7 +3465,7 @@ strings_init()
 	main_menu[3].item_string  = L"save file";
 	main_menu[4].item_string  = L"redraw screen";
 	main_menu[5].item_string  = L"search";
-	help_text[0] = L"Control keys:                                                              "; 
+	help_text[0] = L"Control keys:                                                              ";
 	help_text[1] = L"^a ascii code           ^i tab                  ^r right                   ";
 	help_text[2] = L"^b bottom of text       ^j newline              ^t top of text             ";
 	help_text[3] = L"^c command              ^k delete char          ^u up                      ";
@@ -3603,7 +3601,6 @@ strings_init()
 	menu_too_lrg_msg = "menu too large for window";
 	more_above_str = L"^^more^^";
 	more_below_str = L"VVmoreVV";
-	
 
 	commands[0] = HELP;
 	commands[1] = SAVE;

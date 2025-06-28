@@ -113,7 +113,7 @@ ttywait (struct timeval prev, struct timeval cur, double speed)
   diff = timeval_div (diff, speed);
 
   select (1, NULL, NULL, NULL, &diff); /* skip if a user hits any key */
-  
+
   return speed;
 }
 
@@ -509,7 +509,6 @@ ttypeek (FILE * fp, double speed)
     }
   } while (r == READ_RESTART);
 }
-
 
 int
 ttyplay_main (char *ttyfile, int mode, int resizex, int resizey)

@@ -1,6 +1,6 @@
 /* vi: set sw=8 ts=8: */
 /*
- * virus - vi resembling utility skeleton - based on 
+ * virus - vi resembling utility skeleton - based on
  * tiny vi.c: A small 'vi' clone (from busybox 0.52)
  *
  * Copyright (C) 2001 - 2003 Stefan Koerner <ripclaw@rocklinux.org>
@@ -140,7 +140,6 @@ static const int S_END_ALNUM = 5; // used in skip_thing() for moving "dot"
 
 typedef unsigned char Byte;
 
-
 static int editing;             // >0 while we are editing a file
 static int cmd_mode;            // 0=command  1=insert
 static int file_modified;       // buffer contents changed
@@ -204,7 +203,6 @@ static Byte *context_start, *context_end;
 #ifdef BB_FEATURE_VI_SEARCH
 static Byte *last_search_pattern; // last pattern from a '/' or '?' search
 #endif /* BB_FEATURE_VI_SEARCH */
-
 
 static void edit_file (Byte *); // edit one file
 static void do_cmd (Byte);      // execute a command
@@ -313,7 +311,6 @@ static void crash_test ();
 static int crashme = 0;
 #endif /* BB_FEATURE_VI_CRASHME */
 
-
 extern int
 main (int argc, char **argv)
 {
@@ -366,7 +363,6 @@ main (int argc, char **argv)
     }
 
   //-----------------------------------------------------------
-
 
   /* set these back to defaults. this was the infamous screen resize crash bug */
   signal (SIGWINCH, SIG_DFL);
@@ -830,29 +826,29 @@ key_cmd_mode:
       //case 0x1d:    // gs
       //case 0x1e:    // rs
       //case 0x1f:    // us
-      //case '!':     // !- 
-      //case '#':     // #- 
-      //case '&':     // &- 
-      //case '(':     // (- 
-      //case ')':     // )- 
-      //case '*':     // *- 
-      //case ',':     // ,- 
-      //case '=':     // =- 
-      //case '@':     // @- 
-      //case 'F':     // F- 
-      //case 'K':     // K- 
-      //case 'Q':     // Q- 
-      //case 'S':     // S- 
-      //case 'T':     // T- 
-      //case 'V':     // V- 
-      //case '[':     // [- 
-      //case '\\':    // \- 
-      //case ']':     // ]- 
-      //case '_':     // _- 
-      //case '`':     // `- 
-      //case 'g':     // g- 
+      //case '!':     // !-
+      //case '#':     // #-
+      //case '&':     // &-
+      //case '(':     // (-
+      //case ')':     // )-
+      //case '*':     // *-
+      //case ',':     // ,-
+      //case '=':     // =-
+      //case '@':     // @-
+      //case 'F':     // F-
+      //case 'K':     // K-
+      //case 'Q':     // Q-
+      //case 'S':     // S-
+      //case 'T':     // T-
+      //case 'V':     // V-
+      //case '[':     // [-
+      //case '\\':    // \-
+      //case ']':     // ]-
+      //case '_':     // _-
+      //case '`':     // `-
+      //case 'g':     // g-
       //case 'u':     // u- FIXME- there is no undo
-      //case 'v':     // v- 
+      //case 'v':     // v-
     default:                   // unrecognised command
       buf[0] = c;
       buf[1] = '\0';
@@ -1173,15 +1169,15 @@ key_cmd_mode:
       break;
 #endif /* BB_FEATURE_VI_SEARCH */
     case '0':                  // 0- goto begining of line
-    case '1':                  // 1- 
-    case '2':                  // 2- 
-    case '3':                  // 3- 
-    case '4':                  // 4- 
-    case '5':                  // 5- 
-    case '6':                  // 6- 
-    case '7':                  // 7- 
-    case '8':                  // 8- 
-    case '9':                  // 9- 
+    case '1':                  // 1-
+    case '2':                  // 2-
+    case '3':                  // 3-
+    case '4':                  // 4-
+    case '5':                  // 5-
+    case '6':                  // 6-
+    case '7':                  // 7-
+    case '8':                  // 8-
+    case '9':                  // 9-
       if (c == '0' && cmdcnt < 1) {
           dot_begin ();         // this was a standalone zero
         } else {

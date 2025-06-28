@@ -21,27 +21,27 @@ OLD_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM user_ip_history WHERE last_
 
 if [ "$OLD_COUNT" -gt 0 ]; then
     log_message "Found $OLD_COUNT IP records older than $RETENTION_DAYS days"
-    
+
     # Perform cleanup
     sqlite3 "$DB_PATH" <<EOF
 -- Delete old IP history
-DELETE FROM user_ip_history 
+DELETE FROM user_ip_history
 WHERE last_seen < strftime('%s', 'now', '-${RETENTION_DAYS} days');
 
 -- Clear old IPs from user table
-UPDATE dglusers 
-SET last_ip = NULL 
-WHERE last_login_time < strftime('%s', 'now', '-${RETENTION_DAYS} days') 
+UPDATE dglusers
+SET last_ip = NULL
+WHERE last_login_time < strftime('%s', 'now', '-${RETENTION_DAYS} days')
   AND last_ip IS NOT NULL;
 
 -- Reclaim space
 VACUUM;
 EOF
-    
+
     # Get count after cleanup
     AFTER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM user_ip_history;" 2>/dev/null || echo "0")
     REMOVED=$((BEFORE_COUNT - AFTER_COUNT))
-    
+
     log_message "Cleanup complete. Removed $REMOVED records. Remaining: $AFTER_COUNT"
 else
     log_message "No old records found. Total records: $BEFORE_COUNT"

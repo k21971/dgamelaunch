@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_ip_history_last_seen ON user_ip_history(last_seen
 
 -- View to see latest IP for each user
 CREATE VIEW IF NOT EXISTS user_latest_ips AS
-SELECT 
+SELECT
     u.username,
     u.email,
     u.last_ip,
@@ -35,7 +35,7 @@ ORDER BY u.last_login_time DESC;
 
 -- View to see all IPs for a specific user (usage: SELECT * FROM user_all_ips WHERE username='someuser')
 CREATE VIEW IF NOT EXISTS user_all_ips AS
-SELECT 
+SELECT
     username,
     ip_address,
     datetime(first_seen, 'unixepoch') as first_seen_date,

@@ -92,7 +92,7 @@ fi
 if strings "$TEST_DIR/dgamelaunch" | grep -q "USE_SQLITE3"; then
     BUILD_TYPE="sqlite"
     echo "Detected SQLite build"
-    
+
     # Initialize database if needed
     if [ ! -f "$TEST_DIR/dgamelaunch.db" ]; then
         echo "Initializing SQLite database..."
@@ -100,7 +100,7 @@ if strings "$TEST_DIR/dgamelaunch" | grep -q "USE_SQLITE3"; then
             echo "ERROR: sqlite3 command not found. Install sqlite3 package!"
             exit 1
         fi
-        
+
         sqlite3 "$TEST_DIR/dgamelaunch.db" << 'EOF'
 CREATE TABLE IF NOT EXISTS dglusers (
     id INTEGER PRIMARY KEY,
@@ -135,7 +135,7 @@ else
     echo "Detected flat file build"
     touch "$TEST_DIR/dgl-login"
     touch "$TEST_DIR/dgl-lock"
-    
+
     if [ -s "$TEST_DIR/dgl-login" ]; then
         echo "Registered users:"
         cut -d: -f1 "$TEST_DIR/dgl-login" | sed 's/^/  /'
@@ -235,7 +235,7 @@ DEFINE {
   ttyrecdir = "$TEST_DIR/userdata/%N/%n/ttyrec-zork/"
   max_idle_time = 3600
   encoding = "ascii"
-  
+
   # Commands before game starts
   commands = mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
              setenv "DGL_USER" "%n",

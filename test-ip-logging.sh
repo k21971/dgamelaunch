@@ -36,7 +36,7 @@ if run_sql "PRAGMA table_info(dglusers);" | grep -q "last_ip"; then
     echo "   ✓ last_ip column exists"
 else
     echo "   ✗ last_ip column missing - applying schema update..."
-    
+
     # Apply schema changes
     run_sql "ALTER TABLE dglusers ADD COLUMN last_ip TEXT DEFAULT NULL;"
     run_sql "ALTER TABLE dglusers ADD COLUMN last_login_time INTEGER DEFAULT NULL;"
@@ -58,10 +58,10 @@ echo "   ✓ IP history table ready"
 
 echo ""
 echo "5. Current user data with IP info:"
-run_sql "SELECT username, email, last_ip, 
-         CASE WHEN last_login_time IS NULL THEN 'Never' 
-              ELSE datetime(last_login_time, 'unixepoch') 
-         END as last_login 
+run_sql "SELECT username, email, last_ip,
+         CASE WHEN last_login_time IS NULL THEN 'Never'
+              ELSE datetime(last_login_time, 'unixepoch')
+         END as last_login
          FROM dglusers;" | column -t -s "|" | sed 's/^/   /'
 
 echo ""
@@ -69,11 +69,11 @@ echo "6. IP address history:"
 if [ $(run_sql "SELECT COUNT(*) FROM user_ip_history;") -eq 0 ]; then
     echo "   (No IP history recorded yet)"
 else
-    run_sql "SELECT username, ip_address, 
+    run_sql "SELECT username, ip_address,
              datetime(first_seen, 'unixepoch') as first_seen,
              datetime(last_seen, 'unixepoch') as last_seen,
              connection_count
-             FROM user_ip_history 
+             FROM user_ip_history
              ORDER BY last_seen DESC;" | column -t -s "|" | sed 's/^/   /'
 fi
 

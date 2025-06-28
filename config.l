@@ -31,7 +31,7 @@ UPREF           \$\{[a-zA-Z][a-zA-Z0-9]*(:{VALUE})?\}
   graceful_exit(13);
 }
 
-{NUMBER} { 
+{NUMBER} {
   yylval.i = strtoul(yytext, NULL, 10);
   return TYPE_NUMBER;
 }
@@ -45,7 +45,7 @@ UPREF           \$\{[a-zA-Z][a-zA-Z0-9]*(:{VALUE})?\}
 {MALSTRING} {
   yytext[yyleng - 1] = '\0'; /* remove trailing newline */
   fprintf(stderr, "%s:%d:%d: unterminated string constant: %s\n", config, line, (int)(col - yyleng + 1), yytext);
-  return TYPE_MALSTRING; 
+  return TYPE_MALSTRING;
 }
 
 {UPREF} {
@@ -73,7 +73,6 @@ UPREF           \$\{[a-zA-Z][a-zA-Z0-9]*(:{VALUE})?\}
 "maxnicklen"	{ return TYPE_MAXNICKLEN; }
 "allow_new_nicks"	{ return TYPE_ALLOW_REGISTRATION; }
 "menu_max_idle_time"	{ return TYPE_MENU_MAX_IDLE_TIME; }
-
 
 menu		{ return TYPE_DEFINE_MENU; }
 bannerfile	{ return TYPE_BANNER_FILE; }
@@ -128,8 +127,8 @@ exec		{ yylval.i = DGLCMD_EXEC;   return TYPE_DGLCMD2; }
 chpasswd	{ yylval.i = DGLCMD_CHPASSWD;   return TYPE_DGLCMD0; }
 chmail		{ yylval.i = DGLCMD_CHMAIL;     return TYPE_DGLCMD0; }
 setprefpath	{ yylval.i = DGLCMD_SETPREFPATH; return TYPE_DGLCMD1; }
-setpref 	{ yylval.i = DGLCMD_SETPREF;    return TYPE_DGLCMD2; }
-askpref 	{ yylval.i = DGLCMD_ASKPREF;    return TYPE_DGLCMD2; }
+setpref	{ yylval.i = DGLCMD_SETPREF;    return TYPE_DGLCMD2; }
+askpref	{ yylval.i = DGLCMD_ASKPREF;    return TYPE_DGLCMD2; }
 readprefs	{ yylval.i = DGLCMD_READPREFS;  return TYPE_DGLCMD0; }
 writeprefs	{ yylval.i = DGLCMD_WRITEPREFS; return TYPE_DGLCMD0; }
 watch_menu	{ yylval.i = DGLCMD_WATCH_MENU; return TYPE_DGLCMD0; }
@@ -145,7 +144,6 @@ rawprint	{ yylval.i = DGLCMD_RAWPRINT;    return TYPE_DGLCMD1; }
 sleep		{ yylval.i = DGLCMD_SLEEP;       return TYPE_DGLCMD1; }
 ifnxsleep	{ yylval.i = DGLCMD_IF_NX_SLEEP; return TYPE_DGLCMD2; }
 DEFINE		{ return TYPE_DEFINE_GAME; }
-
 
 \n		{ line++; col = 0; }
 

@@ -54,7 +54,6 @@ static int sortmode_number(const char *sortmode_name) {
     return -1;
 }
 
-
 %}
 
 %union {
@@ -259,10 +258,10 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
 		break;
 	    default:
 		fprintf(stderr, "%s:%d: token %s does not take a boolean, bailing out\n",
-			config, line, lookup_token($1)); 
+			config, line, lookup_token($1));
 		exit(1);
 	    }
-  	}
+	}
 	| KeyType '=' TYPE_NUMBER {
 
   switch ($1)
@@ -308,7 +307,7 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
 
     default:
       fprintf(stderr, "%s:%d: token %s does not take a number, bailing out\n",
-        config, line, lookup_token($1)); 
+        config, line, lookup_token($1));
       exit(1);
   }
 }
@@ -323,7 +322,6 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
             memset(curr_watch_columns, 0, sizeof curr_watch_columns);
             curr_n_watch_columns = 0;
           };
-
 
 banner_vars : banner_vars ',' banner_var
 	| banner_var;
@@ -404,11 +402,9 @@ menu_definition : TYPE_BANNER_FILE '=' TYPE_VALUE
          }
        ;
 
-
 menu_definitions : menu_definition
 	| menu_definition menu_definitions
 	;
-
 
 definemenu : TYPE_DEFINE_MENU '[' TYPE_VALUE ']'
 	{
@@ -440,8 +436,6 @@ definemenu : TYPE_DEFINE_MENU '[' TYPE_VALUE ']'
 	    curr_menu = NULL;
 	}
 	;
-
-
 
 game_definition : TYPE_CMDQUEUE
 	{

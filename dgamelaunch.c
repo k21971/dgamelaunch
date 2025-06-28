@@ -359,7 +359,6 @@ signals_release()
     }
 }
 
-
 /* ************************************************************* */
 
 const char *
@@ -371,7 +370,6 @@ get_mainmenu_name()
     }
     return "mainmenu_anon";
 }
-
 
 char*
 gen_ttyrec_filename ()
@@ -508,7 +506,6 @@ idle_alarm_reset(void)
 
 /* ************************************************************* */
 
-
 static char *
 bannerstr_substprefs(char *buf, char *bufnew, int buflen)
 {
@@ -536,7 +533,7 @@ bannerstr_substprefs(char *buf, char *bufnew, int buflen)
                     snprintf(dst, bufnew + buflen - dst - 1, "%c", gpr[0]);
                 } else
                     snprintf(dst, bufnew + buflen - dst - 1, "%s", gpr);
-                if (gpr) free(gpr); 
+                if (gpr) free(gpr);
                 for (; *dst; dst++);
                 fallback = varname = NULL;
             }
@@ -1978,7 +1975,6 @@ domailuser (char *username)
   return;
 }
 
-
 /* ************************************************************* */
 
 void
@@ -2501,7 +2497,6 @@ askpref (char *prompt, char *key)
     return setpref(key, value);
 }
 
-
 /* ************************************************************* */
 
 int
@@ -2787,8 +2782,6 @@ write_canned_rcfile (int game, char *target)
   chmod (target, default_fmode);
 }
 
-
-
 /* ************************************************************* */
 
 #ifndef USE_SQLITE3
@@ -3069,7 +3062,6 @@ purge_stale_locks (int game)
   closedir (pdir);
   return 1;
 }
-
 
 int
 runmenuloop(struct dg_menu *menu)

@@ -32,10 +32,10 @@ Non-upgraded servers will continue to work normally because:
 After all servers are upgraded:
 ```sql
 -- Check IP logging is working
-SELECT username, last_ip, datetime(last_login_time, 'unixepoch') 
-FROM dglusers 
-WHERE last_ip IS NOT NULL 
-ORDER BY last_login_time DESC 
+SELECT username, last_ip, datetime(last_login_time, 'unixepoch')
+FROM dglusers
+WHERE last_ip IS NOT NULL
+ORDER BY last_login_time DESC
 LIMIT 10;
 ```
 
@@ -60,22 +60,22 @@ If issues arise, you can safely rollback:
    ```sql
    -- Create backup first!
    cp dgamelaunch.db dgamelaunch.db.backup
-   
+
    -- Remove IP logging (SQLite doesn't support DROP COLUMN directly)
    BEGIN TRANSACTION;
-   CREATE TABLE dglusers_new AS 
-   SELECT id, username, email, env, password, flags 
+   CREATE TABLE dglusers_new AS
+   SELECT id, username, email, env, password, flags
    FROM dglusers;
-   
+
    DROP TABLE dglusers;
    ALTER TABLE dglusers_new RENAME TO dglusers;
-   
+
    CREATE INDEX idx_username ON dglusers(username);
-   
+
    DROP TABLE IF EXISTS user_ip_history;
    DROP VIEW IF EXISTS user_latest_ips;
    DROP VIEW IF EXISTS user_all_ips;
-   
+
    COMMIT;
    ```
 
