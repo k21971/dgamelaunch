@@ -13,6 +13,7 @@ fi
 # Configuration
 TEST_DIR="${DGAMELAUNCH_TEST_DIR:-/tmp/dgl-test}"
 NETHACK_PATH="${NETHACK_PATH:-/usr/games/lib/official_36_nethackdir}"
+ZORK_PATH="/usr/games/lib/zork1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Determine user to drop privileges to
@@ -36,6 +37,7 @@ fi
 echo "=== DGamelaunch Test Environment ==="
 echo "Test directory: $TEST_DIR"
 echo "NetHack path: $NETHACK_PATH"
+echo "Zork path: $ZORK_PATH"
 echo ""
 
 # Check if dgamelaunch is built
@@ -50,10 +52,26 @@ if [ ! -f "$SCRIPT_DIR/ee" ] || [ ! -f "$SCRIPT_DIR/virus" ]; then
     exit 1
 fi
 
+# Check for Zork support
+ZORK_AVAILABLE=0
+if [ -f "$ZORK_PATH/Zork1.dat" ] && command -v frotz >/dev/null 2>&1; then
+    ZORK_AVAILABLE=1
+    echo "Zork I support detected"
+else
+    if [ ! -f "$ZORK_PATH/Zork1.dat" ]; then
+        echo "NOTE: Zork1.dat not found at $ZORK_PATH - Zork will not be available"
+    fi
+    if ! command -v frotz >/dev/null 2>&1; then
+        echo "NOTE: frotz not installed - Zork will not be available"
+    fi
+fi
+
 # Create directory structure if needed
 if [ ! -d "$TEST_DIR" ]; then
     echo "Creating test environment..."
     mkdir -p "$TEST_DIR"/{dgldir,userdata,inprogress,ttyrec,rcfiles,var/mail,bin}
+    mkdir -p "$TEST_DIR"/inprogress-{nh36,zork1}
+    mkdir -p "$TEST_DIR"/ttyrec-zork
 else
     echo "Using existing test environment..."
 fi
@@ -63,6 +81,12 @@ echo "Updating binaries..."
 cp "$SCRIPT_DIR/dgamelaunch" "$TEST_DIR/"
 cp "$SCRIPT_DIR/ee" "$TEST_DIR/bin/"
 cp "$SCRIPT_DIR/virus" "$TEST_DIR/bin/"
+
+# Copy Zork wrapper if available
+if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-test-wrapper.sh" ]; then
+    cp "$SCRIPT_DIR/zork1-test-wrapper.sh" "$TEST_DIR/bin/zork1-wrapper"
+    chmod +x "$TEST_DIR/bin/zork1-wrapper"
+fi
 
 # Detect build type
 if strings "$TEST_DIR/dgamelaunch" | grep -q "USE_SQLITE3"; then
@@ -144,11 +168,15 @@ cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
 # Commands after registration/login
 commands[register] = mkdir "$TEST_DIR/userdata/%N",
                      mkdir "$TEST_DIR/userdata/%N/%n",
-                     mkdir "$TEST_DIR/userdata/%N/%n/ttyrec"
+                     mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
+                     mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
+                     mkdir "$TEST_DIR/userdata/%N/%n/zork"
 
 commands[login] = mkdir "$TEST_DIR/userdata/%N",
                   mkdir "$TEST_DIR/userdata/%N/%n",
                   mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
+                  mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
+                  mkdir "$TEST_DIR/userdata/%N/%n/zork",
                   setenv "HOME" "$TEST_DIR/dgldir"
 
 filemode = "0666"
@@ -160,12 +188,12 @@ DEFINE {
   game_path = "$NETHACK_PATH/nethack"
   short_name = "NH36"
   game_args = "./nethack", "-u", "%n"
-  inprogressdir = "$TEST_DIR/inprogress/"
+  inprogressdir = "$TEST_DIR/inprogress-nh36/"
   ttyrecdir = "$TEST_DIR/userdata/%N/%n/ttyrec/"
   spooldir = "$TEST_DIR/var/mail/"
   rc_fmt = "$TEST_DIR/userdata/%N/%n/nethackrc"
   encoding = "unicode"
-  
+
   # Commands before game starts
   commands = chdir "$NETHACK_PATH",
              mkdir "$TEST_DIR/userdata/%N/%n/nethack",
@@ -175,6 +203,35 @@ DEFINE {
              setenv "MAIL" "$TEST_DIR/var/mail/%n",
              setenv "SIMPLEMAIL" "1"
 }
+EOF
+
+# Add Zork definition only if available
+if [ $ZORK_AVAILABLE -eq 1 ]; then
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
+
+# Zork I definition
+DEFINE {
+  game_id = "ZORK1"
+  game_name = "Zork I: The Great Underground Empire"
+  game_path = "$TEST_DIR/bin/zork1-wrapper"
+  short_name = "Zork1"
+  game_args = "$TEST_DIR/bin/zork1-wrapper", "%n"
+  inprogressdir = "$TEST_DIR/inprogress-zork1/"
+  ttyrecdir = "$TEST_DIR/userdata/%N/%n/ttyrec-zork/"
+  max_idle_time = 3600
+  encoding = "ascii"
+  
+  # Commands before game starts
+  commands = mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
+             setenv "DGL_USER" "%n",
+             setenv "DGAMELAUNCH_TEST_DIR" "$TEST_DIR",
+             setenv "HOME" "$TEST_DIR/userdata/%N/%n/zork"
+}
+EOF
+fi
+
+# Continue with menus
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
 
 # Menus
 menu["mainmenu_anon"] {
@@ -190,6 +247,17 @@ menu["mainmenu_user"] {
   bannerfile = "$TEST_DIR/dgl-banner-user"
   cursor = (7,0)
   commands["p"] = play_game "NH36"
+EOF
+
+# Add Zork menu option if available
+if [ $ZORK_AVAILABLE -eq 1 ]; then
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
+  commands["z"] = play_game "ZORK1"
+EOF
+fi
+
+# Continue with rest of menu
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
   commands["w"] = watch_menu
   commands["c"] = chpasswd
   commands["m"] = chmail
@@ -215,6 +283,23 @@ q) Quit
 
 EOF
 
+# Create user banner based on available games
+if [ $ZORK_AVAILABLE -eq 1 ]; then
+cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
+=== DGamelaunch Test Server ===
+Logged in as: $USERNAME
+
+p) Play NetHack 3.6.7
+z) Play Zork I
+w) Watch games
+c) Change password
+m) Change email
+e) Edit RC file (ee)
+v) Edit RC file (virus)
+q) Quit
+
+EOF
+else
 cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
 === DGamelaunch Test Server ===
 Logged in as: $USERNAME
@@ -228,6 +313,7 @@ v) Edit RC file (virus)
 q) Quit
 
 EOF
+fi
 
 cat > "$TEST_DIR/dgl-banner-watch" << 'EOF'
 === Watch Menu ===
@@ -268,8 +354,15 @@ if [ -f "$NETHACK_PATH/var/perm" ]; then
 fi
 
 echo ""
-echo "=== Launching dgamelaunch ==="
+echo "=== Test Environment Ready ==="
 echo "Build type: $BUILD_TYPE"
+echo "Games available:"
+echo "  - NetHack 3.6.7"
+if [ $ZORK_AVAILABLE -eq 1 ]; then
+    echo "  - Zork I"
+fi
+echo ""
+echo "=== Launching dgamelaunch ==="
 echo ""
 
 # Launch dgamelaunch

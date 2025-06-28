@@ -1,0 +1,164 @@
+# Adding Zork I to dgamelaunch
+
+This guide explains how to integrate Zork I (and other Z-machine games)
+into dgamelaunch.
+
+## Overview
+
+Zork I is a classic text adventure game that runs on the Z-machine
+virtual machine. To play it through dgamelaunch, we use `dfrotz` (the
+"dumb" interface version of frotz), which works better in multi-user
+environments.
+
+## Quick Start
+
+1. Ensure you have the Zork I data file (`Zork1.dat`)
+2. Run the setup script as root:
+   ```bash
+   sudo ./setup-zork.sh
+   ```
+3. Use `dgamelaunch-zork.conf` as a template or add the Zork
+   configuration to your existing config
+4. Start dgamelaunch with the new configuration
+
+## Files Included
+
+- `zork1-wrapper.sh` - Wrapper script that handles per-user saves
+- `dgamelaunch-zork.conf` - Example configuration with Zork
+- `setup-zork.sh` - Automated setup script
+- `README.zork` - This documentation
+
+## Manual Setup
+
+If you prefer to set up manually:
+
+### 1. Install frotz/dfrotz
+```bash
+sudo apt-get install frotz
+# This package includes both frotz and dfrotz
+```
+
+### 2. Copy files to chroot
+```bash
+# Create directories
+sudo mkdir -p /opt/nethack/nethack.alt.org/zork
+sudo mkdir -p /opt/nethack/nethack.alt.org/bin
+
+# Copy game file
+sudo cp Zork1.dat /opt/nethack/nethack.alt.org/zork/
+
+# Copy dfrotz and wrapper
+sudo cp /usr/games/dfrotz /opt/nethack/nethack.alt.org/bin/
+sudo cp zork1-wrapper.sh /opt/nethack/nethack.alt.org/bin/zork1-wrapper
+sudo chmod 755 /opt/nethack/nethack.alt.org/bin/zork1-wrapper
+```
+
+### 3. Copy required libraries
+dfrotz needs certain shared libraries. Find them with:
+```bash
+ldd /usr/games/dfrotz
+```
+
+Copy each library to the corresponding location in the chroot.
+
+### 4. Add to dgamelaunch.conf
+
+Add this DEFINE block:
+
+```
+DEFINE {
+    game_path = "/bin/zork1-wrapper"
+    game_name = "Zork I: The Great Underground Empire"
+    short_name = "Zork1"
+    game_id = "ZORK1"
+    
+    game_args = "/bin/zork1-wrapper"
+    
+    max_idle_time = 3600
+    
+    inprogressdir = "%rinprogress-zork1/"
+    ttyrecdir = "%ruserdata/%n/ttyrec-zork/"
+    
+    commands = setenv "DGL_USER" "%n",
+               setenv "HOME" "%ruserdata/%n/zork"
+    
+    encoding = "ascii"
+}
+```
+
+Add menu entries:
+```
+commands["z"] = play_game "ZORK1"
+```
+
+## How It Works
+
+1. **User Selection**: User chooses Zork from the dgamelaunch menu
+2. **Environment Setup**: dgamelaunch sets up the environment and
+   drops privileges
+3. **Wrapper Script**: The wrapper script:
+   - Creates a user-specific directory for saves
+   - Copies the game file to user's directory
+   - Changes to that directory
+   - Shows existing save files
+   - Runs dfrotz with security restrictions
+4. **Game Play**: User plays Zork with saves isolated to their
+   directory
+5. **TTY Recording**: Sessions are recorded for spectating
+
+## Save Games
+
+- Save games are stored in `/dgldir/userdata/<username>/zork/`
+- Each user's saves are isolated
+- Use the SAVE and RESTORE commands within Zork
+
+## Troubleshooting
+
+### "I won't run as root!"
+This error only occurs with regular frotz. We use dfrotz which doesn't
+have this restriction. If you see this error, make sure the wrapper is
+using dfrotz, not frotz.
+
+### Libraries not found
+Run `ldd /opt/nethack/nethack.alt.org/bin/dfrotz` to check for missing
+libraries in the chroot.
+
+### Game doesn't start
+Check the dgamelaunch logs and ensure:
+- All files have correct permissions
+- The wrapper script is executable
+- The game file path is correct
+
+## Adding More Z-Machine Games
+
+To add other Infocom games:
+
+1. Copy the game file to `/opt/nethack/nethack.alt.org/zork/`
+2. Create a new wrapper script (copy and modify zork1-wrapper.sh)
+3. Add a new DEFINE block in dgamelaunch.conf
+4. Add a menu entry
+
+Example for Zork II:
+```
+DEFINE {
+    game_path = "/bin/zork2-wrapper"
+    game_name = "Zork II: The Wizard of Frobozz"
+    short_name = "Zork2"
+    game_id = "ZORK2"
+    # ... rest similar to Zork I
+}
+```
+
+## Security Considerations
+
+- dfrotz runs with `-R .` flag to restrict file operations to current directory
+- Each user gets their own copy of the game file
+- Saves are completely isolated per user
+- No access to system files or other users' data
+- The wrapper runs with dropped privileges via dgamelaunch
+
+## Credits
+
+- Zork I was created by Infocom
+- Frotz/dfrotz Z-machine interpreter by Stefan Jokisch and others
+- dgamelaunch integration by [your name/organization]

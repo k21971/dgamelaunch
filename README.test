@@ -40,6 +40,8 @@ Environment variables:
 - `DGAMELAUNCH_TEST_DIR`: Override test directory (default: `/tmp/dgl-test`)
 - `NETHACK_PATH`: Path to NetHack installation (default: `/usr/games/lib/official_36_nethackdir`)
 
+The script automatically detects and includes Zork I if available.
+
 ## Prerequisites
 
 ### For SQLite support (recommended):
@@ -55,16 +57,26 @@ sudo chmod 777 /usr/games/lib/official_36_nethackdir/var /usr/games/lib/official
 sudo chmod 644 /usr/games/lib/official_36_nethackdir/sysconf
 ```
 
+### For Zork support (optional):
+```bash
+# Install dfrotz
+sudo apt-get install frotz
+
+# Ensure Zork data file exists at:
+# /usr/games/lib/zork1/Zork1.dat
+```
+
 ## Testing Features
 
 The test environment allows you to verify:
 - User registration and login
 - SQLite database persistence
-- Game launching (NetHack)
+- Game launching (NetHack and optionally Zork I)
 - Built-in editors (ee and virus)
 - Password/email changes
 - Game watching
 - TTY recording
+- Per-user save isolation (especially for Zork)
 
 ## Troubleshooting
 
