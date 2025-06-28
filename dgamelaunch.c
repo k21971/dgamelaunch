@@ -193,6 +193,116 @@ mysetenv (const char* name, const char* value, int overwrite)
 #endif
 
 /* ************************************************************* */
+
+/* Get client IP address from environment variables
+ * Returns static buffer with IP address or "unknown" if not found
+ * Supports both IPv4 and IPv6 addresses
+ */
+static const char *
+get_client_ip(void)
+{
+    static char ip_buffer[64];
+    char *env_value;
+    char *space_pos;
+
+    /* Try SSH_CLIENT first (format: "client_ip client_port server_port") */
+    env_value = getenv("SSH_CLIENT");
+    if (env_value != NULL) {
+        strncpy(ip_buffer, env_value, sizeof(ip_buffer) - 1);
+        ip_buffer[sizeof(ip_buffer) - 1] = '\0';
+        space_pos = strchr(ip_buffer, ' ');
+        if (space_pos != NULL) {
+            *space_pos = '\0';  /* Terminate at first space */
+            return ip_buffer;
+        }
+    }
+
+    /* Try SSH_CONNECTION (format: "client_ip client_port server_ip server_port") */
+    env_value = getenv("SSH_CONNECTION");
+    if (env_value != NULL) {
+        strncpy(ip_buffer, env_value, sizeof(ip_buffer) - 1);
+        ip_buffer[sizeof(ip_buffer) - 1] = '\0';
+        space_pos = strchr(ip_buffer, ' ');
+        if (space_pos != NULL) {
+            *space_pos = '\0';
+            return ip_buffer;
+        }
+    }
+
+    /* Try REMOTE_ADDR (some telnet servers) */
+    env_value = getenv("REMOTE_ADDR");
+    if (env_value != NULL) {
+        strncpy(ip_buffer, env_value, sizeof(ip_buffer) - 1);
+        ip_buffer[sizeof(ip_buffer) - 1] = '\0';
+        return ip_buffer;
+    }
+
+    /* No IP found */
+    strcpy(ip_buffer, "unknown");
+    return ip_buffer;
+}
+
+/* ************************************************************* */
+
+#ifdef USE_SQLITE3
+/* Log user login with IP address (for regular logins) */
+static void
+log_user_login(const char *username, const char *ip_address)
+{
+    sqlite3 *db;
+    int ret;
+    time_t now = time(NULL);
+    char *qbuf;
+
+    if (!username || !ip_address) return;
+
+    ret = sqlite3_open(globalconfig.passwd, &db);
+    if (ret) {
+        sqlite3_close(db);
+        return;  /* Non-fatal, just skip logging */
+    }
+
+    sqlite3_busy_timeout(db, 10000);
+
+    /* Update last login info in dglusers table */
+    qbuf = sqlite3_mprintf(
+        "UPDATE dglusers SET last_ip='%q', last_login_time=%ld WHERE username='%q'",
+        ip_address, (long)now, username
+    );
+    sqlite3_exec(db, qbuf, NULL, NULL, NULL);
+    sqlite3_free(qbuf);
+
+    /* Update IP history */
+    if (strcmp(ip_address, "unknown") != 0) {
+        qbuf = sqlite3_mprintf(
+            "INSERT INTO user_ip_history (username, ip_address, first_seen, last_seen, connection_count) "
+            "VALUES ('%q', '%q', %ld, %ld, 1) "
+            "ON CONFLICT(username, ip_address) DO UPDATE SET "
+            "last_seen=%ld, connection_count=connection_count+1",
+            username, ip_address, (long)now, (long)now, (long)now
+        );
+        sqlite3_exec(db, qbuf, NULL, NULL, NULL);
+        sqlite3_free(qbuf);
+    }
+
+    sqlite3_close(db);
+}
+
+/* Log failed login attempt */
+static void
+log_failed_login(const char *username, const char *ip_address)
+{
+    /* For now, just log to debug file */
+    char logmsg[256];
+    snprintf(logmsg, sizeof(logmsg), "Failed login: user=%s ip=%s",
+             username ? username : "(unknown)", ip_address);
+    debug_write(logmsg);
+
+    /* TODO: Could create a failed_login_attempts table in the future */
+}
+#endif /* USE_SQLITE3 */
+
+/* ************************************************************* */
 /* for ttyrec */
 
 void
@@ -1953,6 +2063,9 @@ autologin (char* user, char *pass)
       if ((passwordgood(pass) || initplayer == 1) && !(me->flags & DGLACCT_LOGIN_LOCK)) {
 	  loggedin = 1;
 	  setproctitle ("%s", me->username);
+#ifdef USE_SQLITE3
+	  log_user_login(me->username, get_client_ip());
+#endif
 	  dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_LOGIN], 0, me);
       }
   }
@@ -2019,6 +2132,9 @@ loginprompt (int from_ttyplay)
   if (passwordgood (pw_buf))
     {
 	if (me->flags & DGLACCT_LOGIN_LOCK) {
+#ifdef USE_SQLITE3
+	    log_failed_login(me->username, get_client_ip());
+#endif
 	    clear ();
 	    mvprintw(5, 1, "Sorry, that account has been banned.--More--");
 	    dgl_getch();
@@ -2030,10 +2146,18 @@ loginprompt (int from_ttyplay)
 	  setproctitle("%s [watching %s]", me->username, chosen_name);
       else
 	  setproctitle("%s", me->username);
+#ifdef USE_SQLITE3
+      log_user_login(me->username, get_client_ip());
+#endif
       dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_LOGIN], 0, me);
     }
   else
   {
+#ifdef USE_SQLITE3
+    if (me && me->username) {
+        log_failed_login(me->username, get_client_ip());
+    }
+#endif
     me = NULL;
     if (from_ttyplay == 1)
     {
@@ -2763,11 +2887,15 @@ writefile (int requirenew)
     int ret;
 
     char *qbuf;
+    const char *client_ip = get_client_ip();
+    time_t now = time(NULL);
 
     if (requirenew) {
-	qbuf = sqlite3_mprintf("insert into dglusers (username, email, env, password, flags) values ('%q', '%q', '%q', '%q', %li)", me->username, me->email, me->env, me->password, me->flags);
+	qbuf = sqlite3_mprintf("insert into dglusers (username, email, env, password, flags, last_ip, last_login_time) values ('%q', '%q', '%q', '%q', %li, '%q', %ld)",
+	                       me->username, me->email, me->env, me->password, me->flags, client_ip, (long)now);
     } else {
-	qbuf = sqlite3_mprintf("update dglusers set username='%q', email='%q', env='%q', password='%q', flags=%li where id=%i", me->username, me->email, me->env, me->password, me->flags, me->id);
+	qbuf = sqlite3_mprintf("update dglusers set username='%q', email='%q', env='%q', password='%q', flags=%li, last_ip='%q', last_login_time=%ld where id=%i",
+	                       me->username, me->email, me->env, me->password, me->flags, client_ip, (long)now, me->id);
     }
 
     ret = sqlite3_open(globalconfig.passwd, &db);
@@ -2787,6 +2915,20 @@ writefile (int requirenew)
 	debug_write("writefile sqlite3_exec failed");
 	graceful_exit(98);
     }
+
+    /* Log to IP history table (optional - ignore errors) */
+    if (strcmp(client_ip, "unknown") != 0) {
+	qbuf = sqlite3_mprintf(
+	    "INSERT INTO user_ip_history (username, ip_address, first_seen, last_seen, connection_count) "
+	    "VALUES ('%q', '%q', %ld, %ld, 1) "
+	    "ON CONFLICT(username, ip_address) DO UPDATE SET "
+	    "last_seen=%ld, connection_count=connection_count+1",
+	    me->username, client_ip, (long)now, (long)now, (long)now
+	);
+	sqlite3_exec(db, qbuf, NULL, NULL, NULL);  /* Ignore errors for history table */
+	sqlite3_free(qbuf);
+    }
+
     sqlite3_close(db);
 }
 #endif

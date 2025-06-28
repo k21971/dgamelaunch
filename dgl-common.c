@@ -697,14 +697,26 @@ sort_games (struct dg_game **games, int len, dg_sortmode sortmode)
 
 #ifdef USE_DEBUGFILE
 void
-debug_write(char *str)
+debug_write(const char *str)
 {
     FILE *fp;
-    fp = fopen("/dgldebug.log", "a");
+    const char *debug_path;
+    
+    /* Use configured path, or fallback to default */
+    if (globalconfig.debuglogfile && globalconfig.debuglogfile[0] != '\0') {
+        debug_path = globalconfig.debuglogfile;
+    } else if (globalconfig.chroot) {
+        /* In chroot mode, use chroot-relative path */
+        debug_path = "/dgldebug.log";
+    } else {
+        /* Non-chroot mode (test environment), use /tmp */
+        debug_path = "/tmp/dgldebug.log";
+    }
+    
+    fp = fopen(debug_path, "a");
     if (!fp) return;
     fprintf(fp, "%s\n", str);
     fclose(fp);
-
 }
 #endif /* USE_DEBUGFILE */
 

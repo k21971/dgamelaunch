@@ -255,6 +255,8 @@ struct dg_globalconfig
 
     struct dg_menulist *menulist;
     int menu_max_idle_time;
+    
+    char *debuglogfile; /* path to debug log file (when USE_DEBUGFILE) */
 };
 
 
@@ -312,7 +314,7 @@ extern void free_populated_games(struct dg_game **games, int len);
 extern struct dg_game **populate_games(int game, int *l, struct dg_user *me);
 
 #ifdef USE_DEBUGFILE
-extern void debug_write(char *str);
+extern void debug_write(const char *str);
 #else
 #define debug_write(str)
 #endif

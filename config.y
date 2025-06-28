@@ -68,7 +68,7 @@ static int sortmode_number(const char *sortmode_name) {
 %token TYPE_ALLOW_REGISTRATION TYPE_WATCH_COLUMNS TYPE_GAME_ID
 %token TYPE_PATH_GAME TYPE_NAME_GAME TYPE_PATH_DGLDIR TYPE_PATH_SPOOL
 %token TYPE_PATH_BANNER TYPE_PATH_CANNED TYPE_PATH_CHROOT
-%token TYPE_PATH_PASSWD TYPE_PATH_LOCKFILE TYPE_PATH_TTYREC
+%token TYPE_PATH_PASSWD TYPE_PATH_LOCKFILE TYPE_PATH_TTYREC TYPE_PATH_DEBUGLOG
 %token TYPE_MALSTRING TYPE_PATH_INPROGRESS TYPE_GAME_ARGS TYPE_RC_FMT
 %token TYPE_CMDQUEUE TYPE_DEFINE_MENU TYPE_BANNER_FILE TYPE_CURSOR
 %token TYPE_POSTCMDQUEUE TYPE_TIMEFORMAT
@@ -210,6 +210,11 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
     case TYPE_PATH_LOCKFILE:
       if (globalconfig.lockfile) free (globalconfig.lockfile);
       globalconfig.lockfile = strdup($3);
+      break;
+
+    case TYPE_PATH_DEBUGLOG:
+      if (globalconfig.debuglogfile) free (globalconfig.debuglogfile);
+      globalconfig.debuglogfile = strdup($3);
       break;
 
     case TYPE_PATH_PASSWD:
@@ -718,6 +723,7 @@ KeyType : TYPE_SUSER	{ $$ = TYPE_SUSER; }
 	| TYPE_PATH_TTYREC	{ $$ = TYPE_PATH_TTYREC; }
 	| TYPE_PATH_PASSWD	{ $$ = TYPE_PATH_PASSWD; }
 	| TYPE_PATH_LOCKFILE	{ $$ = TYPE_PATH_LOCKFILE; }
+	| TYPE_PATH_DEBUGLOG	{ $$ = TYPE_PATH_DEBUGLOG; }
 	| TYPE_PATH_INPROGRESS	{ $$ = TYPE_PATH_INPROGRESS; }
 	| TYPE_ENCODING         { $$ = TYPE_ENCODING; }
 	| TYPE_LOCALE		{ $$ = TYPE_LOCALE; }

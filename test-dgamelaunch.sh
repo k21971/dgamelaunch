@@ -108,9 +108,21 @@ CREATE TABLE IF NOT EXISTS dglusers (
     email TEXT,
     env TEXT,
     password TEXT,
-    flags INTEGER DEFAULT 0
+    flags INTEGER DEFAULT 0,
+    last_ip TEXT DEFAULT NULL,
+    last_login_time INTEGER DEFAULT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_username ON dglusers(username);
+
+CREATE TABLE IF NOT EXISTS user_ip_history (
+    username TEXT NOT NULL,
+    ip_address TEXT NOT NULL,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    connection_count INTEGER DEFAULT 1,
+    PRIMARY KEY (username, ip_address)
+);
+CREATE INDEX IF NOT EXISTS idx_ip_history_last_seen ON user_ip_history(last_seen);
 EOF
     else
         echo "Using existing SQLite database"
@@ -152,6 +164,9 @@ flowcontrol = no
 
 # File paths
 banner = "$TEST_DIR/dgl-banner"
+
+# Debug log (if compiled with --enable-debugfile)
+debuglogfile = "$TEST_DIR/dgldebug.log"
 EOF
 
 # Add database-specific config

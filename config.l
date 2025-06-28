@@ -90,6 +90,7 @@ cursor		{ return TYPE_CURSOR; }
 "rc_template"	{ return TYPE_PATH_CANNED; }
 "passwd"	{ return TYPE_PATH_PASSWD; }
 "lockfile"	{ return TYPE_PATH_LOCKFILE; }
+"debuglogfile"	{ return TYPE_PATH_DEBUGLOG; }
 "inprogressdir" { return TYPE_PATH_INPROGRESS; }
 "game_args"	{ return TYPE_GAME_ARGS; }
 "watch_args"	{ return TYPE_WATCH_ARGS; }

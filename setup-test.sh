@@ -23,7 +23,7 @@ DB_PATH="$TEST_DIR/dgamelaunch.db"
 
 # Check for SQLite support
 if [ -f /usr/include/sqlite3.h ] && command -v sqlite3 >/dev/null 2>&1; then
-    echo "Building with SQLite support..."
+    echo "Building with SQLite support (includes IP logging)..."
     SQLITE_OPTS="--enable-sqlite --with-sqlite-db=$DB_PATH"
     BUILD_TYPE="sqlite"
 else
@@ -36,6 +36,7 @@ fi
 echo "Configuring dgamelaunch..."
 CFLAGS="-g3 -O0 -Wall -Wextra -Wshadow -Wwrite-strings -Wformat=2 -Wformat-security -Wstrict-prototypes -Wmissing-prototypes" \
 ./autogen.sh --enable-shmem \
+             --enable-debugfile \
              --with-config-file="$CONFIG_PATH" \
              $SQLITE_OPTS
 
@@ -60,11 +61,13 @@ echo "  - Test directory: $TEST_DIR"
 echo "  - Config file: $CONFIG_PATH"
 if [ "$BUILD_TYPE" = "sqlite" ]; then
     echo "  - SQLite database: $DB_PATH"
+    echo "  - IP address logging enabled (tracks logins and connections)"
 fi
+echo "  - Debug logging enabled (failed logins, errors)"
 echo ""
 echo "And then launch dgamelaunch with the test menu where you can:"
 echo "  - Register a new account"
-echo "  - Play NetHack"
+echo "  - Play NetHack (and optionally Zork I)"
 echo "  - Edit config files with ee or virus"
 echo "  - Test all dgamelaunch features"
 echo ""
