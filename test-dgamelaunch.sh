@@ -88,7 +88,7 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
     # Create a temporary version with test paths
     sed -e "s|/zork1/Zork1.dat|$ZORK_PATH/Zork1.dat|g" \
         -e "s|/dgldir/userdata|$TEST_DIR/userdata|g" \
-        -e "s|/bin/dfrotz|$TEST_DIR/bin/dfrotz|g" \
+        -e "s|/bin/frotz|$TEST_DIR/bin/frotz|g" \
         "$SCRIPT_DIR/zork1-wrapper.c" > "$TEST_DIR/zork1-wrapper-test.c"
     gcc -O2 -Wall -o "$TEST_DIR/bin/zork1-wrapper" "$TEST_DIR/zork1-wrapper-test.c"
     if [ $? -eq 0 ]; then
@@ -98,18 +98,15 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
         echo "Warning: Failed to compile Zork wrapper"
         ZORK_AVAILABLE=0
     fi
-    
-    # Copy dfrotz to test environment
-    if command -v dfrotz >/dev/null 2>&1; then
-        cp "$(which dfrotz)" "$TEST_DIR/bin/"
-    elif command -v frotz >/dev/null 2>&1; then
-        # Some systems have frotz as dfrotz
-        cp "$(which frotz)" "$TEST_DIR/bin/dfrotz"
+
+    # Copy frotz to test environment
+    if command -v frotz >/dev/null 2>&1; then
+        cp "$(which frotz)" "$TEST_DIR/bin/"
     else
-        echo "Warning: dfrotz not found, Zork may not work"
+        echo "Warning: frotz not found, Zork may not work"
         ZORK_AVAILABLE=0
     fi
-    
+
     # Copy Zork data file to test environment (simulate chroot structure)
     if [ -f "$ZORK_PATH/Zork1.dat" ]; then
         mkdir -p "$TEST_DIR/$ZORK_PATH"
