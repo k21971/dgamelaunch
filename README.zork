@@ -10,27 +10,40 @@ virtual machine. To play it through dgamelaunch, we use `dfrotz` (the
 "dumb" interface version of frotz), which works better in multi-user
 environments.
 
+## Important Requirements
+
+1. **No shell in chroot**: Most dgamelaunch chroots don't include `/bin/sh`,
+   so we use a compiled C wrapper instead of a shell script
+2. **Required config field**: The `inprogressdir` field MUST be defined in
+   the game DEFINE block or dgamelaunch will segfault
+
 ## Quick Start
 
 1. Ensure you have the Zork I data file (`Zork1.dat`)
-2. Run the setup script as root:
+2. Compile the wrapper:
    ```bash
-   sudo ./setup-zork.sh
+   gcc -O2 -Wall -o zork1-wrapper zork1-wrapper.c
    ```
-3. Use `dgamelaunch-zork.conf` as a template or add the Zork
-   configuration to your existing config
-4. Start dgamelaunch with the new configuration
+3. Copy files to chroot (adjust paths as needed):
+   ```bash
+   sudo cp zork1-wrapper /opt/nethack/chroot/bin/
+   sudo chmod 755 /opt/nethack/chroot/bin/zork1-wrapper
+   sudo mkdir -p /opt/nethack/chroot/zork1
+   sudo cp Zork1.dat /opt/nethack/chroot/zork1/
+   ```
+4. Add the Zork configuration to your dgamelaunch.conf (see below)
+5. Create the inprogress directory:
+   ```bash
+   sudo mkdir -p /opt/nethack/chroot/dgldir/inprogress-zork1
+   ```
 
 ## Files Included
 
-- `zork1-wrapper.sh` - Wrapper script that handles per-user saves
-- `dgamelaunch-zork.conf` - Example configuration with Zork
-- `setup-zork.sh` - Automated setup script
+- `zork1-wrapper.c` - C wrapper that handles per-user saves
+- `examples/dgamelaunch-zork.conf` - Example configuration with Zork
 - `README.zork` - This documentation
 
 ## Manual Setup
-
-If you prefer to set up manually:
 
 ### 1. Install frotz/dfrotz
 ```bash
@@ -38,19 +51,9 @@ sudo apt-get install frotz
 # This package includes both frotz and dfrotz
 ```
 
-### 2. Copy files to chroot
+### 2. Copy dfrotz to chroot
 ```bash
-# Create directories
-sudo mkdir -p /opt/nethack/nethack.alt.org/zork
-sudo mkdir -p /opt/nethack/nethack.alt.org/bin
-
-# Copy game file
-sudo cp Zork1.dat /opt/nethack/nethack.alt.org/zork/
-
-# Copy dfrotz and wrapper
-sudo cp /usr/games/dfrotz /opt/nethack/nethack.alt.org/bin/
-sudo cp zork1-wrapper.sh /opt/nethack/nethack.alt.org/bin/zork1-wrapper
-sudo chmod 755 /opt/nethack/nethack.alt.org/bin/zork1-wrapper
+sudo cp /usr/games/dfrotz /opt/nethack/chroot/bin/
 ```
 
 ### 3. Copy required libraries
@@ -69,96 +72,116 @@ Add this DEFINE block:
 DEFINE {
     game_path = "/bin/zork1-wrapper"
     game_name = "Zork I: The Great Underground Empire"
-    short_name = "Zork1"
+    short_name = "zork1"
     game_id = "ZORK1"
     
-    game_args = "/bin/zork1-wrapper"
+    # REQUIRED - dgamelaunch will segfault without this
+    inprogressdir = "%rinprogress-zork1/"
     
     max_idle_time = 3600
     
-    inprogressdir = "%rinprogress-zork1/"
-    ttyrecdir = "%ruserdata/%n/ttyrec-zork/"
+    # User directory structure: /dgldir/userdata/{first_letter}/{username}/zork
+    ttyrecdir = "%ruserdata/%N/%n/zork/ttyrec/"
     
-    commands = setenv "DGL_USER" "%n",
-               setenv "HOME" "%ruserdata/%n/zork"
+    commands = mkdir "%ruserdata/%N/%n/zork",
+               mkdir "%ruserdata/%N/%n/zork/ttyrec",
+               setenv "DGL_USER" "%n",
+               setenv "HOME" "%ruserdata/%N/%n/zork"
     
     encoding = "ascii"
+    
+    # Optional: compress ttyrecs after game
+    postcommands = exec "/bin/gzip" "%t"
 }
 ```
 
-Add menu entries:
+Add menu entry:
 ```
-commands["z"] = play_game "ZORK1"
+commands["z"] = play_game "zork1"
 ```
 
-## How It Works
+## How the C Wrapper Works
 
-1. **User Selection**: User chooses Zork from the dgamelaunch menu
-2. **Environment Setup**: dgamelaunch sets up the environment and
-   drops privileges
-3. **Wrapper Script**: The wrapper script:
-   - Creates a user-specific directory for saves
-   - Copies the game file to user's directory
-   - Changes to that directory
-   - Shows existing save files
-   - Runs dfrotz with security restrictions
-4. **Game Play**: User plays Zork with saves isolated to their
-   directory
-5. **TTY Recording**: Sessions are recorded for spectating
+The `zork1-wrapper.c` program:
+1. Gets username from `DGL_USER` environment variable
+2. Extracts first character for the `%N` directory
+3. Creates directory structure: `/dgldir/userdata/{initial}/{username}/zork`
+4. Changes to that directory for saves
+5. Executes dfrotz with proper security restrictions
+
+## Directory Structure
+
+User data is organized as:
+```
+/dgldir/userdata/
+├── j/
+│   └── johndoe/
+│       └── zork/
+│           ├── ttyrec/
+│           └── *.sav (save files)
+└── m/
+    └── mary/
+        └── zork/
+            ├── ttyrec/
+            └── *.sav (save files)
+```
 
 ## Save Games
 
-- Save games are stored in `/dgldir/userdata/<username>/zork/`
+- Save games are stored in `/dgldir/userdata/{initial}/{username}/zork/`
 - Each user's saves are isolated
 - Use the SAVE and RESTORE commands within Zork
 
 ## Troubleshooting
 
-### "I won't run as root!"
-This error only occurs with regular frotz. We use dfrotz which doesn't
-have this restriction. If you see this error, make sure the wrapper is
-using dfrotz, not frotz.
+### Connection closes immediately
+1. Check if `inprogressdir` is defined in the DEFINE block
+2. Verify the wrapper is compiled and in the correct location
+3. Check that dfrotz and Zork1.dat exist in the chroot
+
+### "Cannot open story file"
+The path to Zork1.dat in the wrapper must be relative to the chroot root.
+If Zork1.dat is at `/opt/nethack/chroot/zork1/Zork1.dat`, the wrapper
+should use `/zork1/Zork1.dat`.
 
 ### Libraries not found
-Run `ldd /opt/nethack/nethack.alt.org/bin/dfrotz` to check for missing
+Run `ldd /opt/nethack/chroot/bin/dfrotz` to check for missing
 libraries in the chroot.
-
-### Game doesn't start
-Check the dgamelaunch logs and ensure:
-- All files have correct permissions
-- The wrapper script is executable
-- The game file path is correct
 
 ## Adding More Z-Machine Games
 
 To add other Infocom games:
 
-1. Copy the game file to `/opt/nethack/nethack.alt.org/zork/`
-2. Create a new wrapper script (copy and modify zork1-wrapper.sh)
-3. Add a new DEFINE block in dgamelaunch.conf
-4. Add a menu entry
+1. Copy the game file to the chroot
+2. Copy and modify zork1-wrapper.c for the new game
+3. Compile the new wrapper
+4. Add a new DEFINE block in dgamelaunch.conf
+5. Add a menu entry
 
 Example for Zork II:
-```
-DEFINE {
-    game_path = "/bin/zork2-wrapper"
-    game_name = "Zork II: The Wizard of Frobozz"
-    short_name = "Zork2"
-    game_id = "ZORK2"
-    # ... rest similar to Zork I
-}
+```c
+// In zork2-wrapper.c, change:
+snprintf(zork_dat, sizeof(zork_dat), "/zork2/Zork2.dat");
 ```
 
 ## Security Considerations
 
-- dfrotz runs with `-R .` flag to restrict file operations to current directory
-- Each user gets their own copy of the game file
-- Saves are completely isolated per user
+- dfrotz runs with `-R` flag to restrict file operations
+- Each user's saves are completely isolated
 - No access to system files or other users' data
 - The wrapper runs with dropped privileges via dgamelaunch
+
+## Technical Notes
+
+- The wrapper is written in C because most dgamelaunch chroots don't
+  include a shell interpreter
+- The `%N` variable is the first character of the username (case-sensitive)
+- The `%n` variable is the full username
+- Always test outside dgamelaunch first: 
+  `sudo chroot /path/to/chroot /bin/zork1-wrapper`
 
 ## Credits
 
 - Zork I was created by Infocom
 - Frotz/dfrotz Z-machine interpreter by Stefan Jokisch and others
-- dgamelaunch integration by [your name/organization]
+- dgamelaunch C wrapper implementation for HDF (Hardfought)
