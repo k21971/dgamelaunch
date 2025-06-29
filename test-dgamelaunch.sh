@@ -54,15 +54,15 @@ fi
 
 # Check for Zork support
 ZORK_AVAILABLE=0
-if [ -f "$ZORK_PATH/Zork1.dat" ] && command -v frotz >/dev/null 2>&1; then
+if [ -f "$ZORK_PATH/Zork1.dat" ] && (command -v dfrotz >/dev/null 2>&1 || command -v frotz >/dev/null 2>&1); then
     ZORK_AVAILABLE=1
     echo "Zork I support detected"
 else
     if [ ! -f "$ZORK_PATH/Zork1.dat" ]; then
         echo "NOTE: Zork1.dat not found at $ZORK_PATH - Zork will not be available"
     fi
-    if ! command -v frotz >/dev/null 2>&1; then
-        echo "NOTE: frotz not installed - Zork will not be available"
+    if ! command -v dfrotz >/dev/null 2>&1 && ! command -v frotz >/dev/null 2>&1; then
+        echo "NOTE: frotz/dfrotz not installed - Zork will not be available"
     fi
 fi
 
@@ -82,10 +82,39 @@ cp "$SCRIPT_DIR/dgamelaunch" "$TEST_DIR/"
 cp "$SCRIPT_DIR/ee" "$TEST_DIR/bin/"
 cp "$SCRIPT_DIR/virus" "$TEST_DIR/bin/"
 
-# Copy Zork wrapper if available
-if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-test-wrapper.sh" ]; then
-    cp "$SCRIPT_DIR/zork1-test-wrapper.sh" "$TEST_DIR/bin/zork1-wrapper"
-    chmod +x "$TEST_DIR/bin/zork1-wrapper"
+# Compile and copy Zork wrapper if available
+if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
+    echo "Compiling Zork wrapper..."
+    # Create a temporary version with test paths
+    sed -e "s|/zork1/Zork1.dat|$ZORK_PATH/Zork1.dat|g" \
+        -e "s|/dgldir/userdata|$TEST_DIR/userdata|g" \
+        -e "s|/bin/dfrotz|$TEST_DIR/bin/dfrotz|g" \
+        "$SCRIPT_DIR/zork1-wrapper.c" > "$TEST_DIR/zork1-wrapper-test.c"
+    gcc -O2 -Wall -o "$TEST_DIR/bin/zork1-wrapper" "$TEST_DIR/zork1-wrapper-test.c"
+    if [ $? -eq 0 ]; then
+        chmod +x "$TEST_DIR/bin/zork1-wrapper"
+        rm "$TEST_DIR/zork1-wrapper-test.c"
+    else
+        echo "Warning: Failed to compile Zork wrapper"
+        ZORK_AVAILABLE=0
+    fi
+    
+    # Copy dfrotz to test environment
+    if command -v dfrotz >/dev/null 2>&1; then
+        cp "$(which dfrotz)" "$TEST_DIR/bin/"
+    elif command -v frotz >/dev/null 2>&1; then
+        # Some systems have frotz as dfrotz
+        cp "$(which frotz)" "$TEST_DIR/bin/dfrotz"
+    else
+        echo "Warning: dfrotz not found, Zork may not work"
+        ZORK_AVAILABLE=0
+    fi
+    
+    # Copy Zork data file to test environment (simulate chroot structure)
+    if [ -f "$ZORK_PATH/Zork1.dat" ]; then
+        mkdir -p "$TEST_DIR/$ZORK_PATH"
+        cp "$ZORK_PATH/Zork1.dat" "$TEST_DIR/$ZORK_PATH/"
+    fi
 fi
 
 # Detect build type
@@ -230,16 +259,16 @@ DEFINE {
   game_name = "Zork I: The Great Underground Empire"
   game_path = "$TEST_DIR/bin/zork1-wrapper"
   short_name = "Zork1"
-  game_args = "$TEST_DIR/bin/zork1-wrapper", "%n"
+  game_args = "$TEST_DIR/bin/zork1-wrapper"
   inprogressdir = "$TEST_DIR/inprogress-zork1/"
-  ttyrecdir = "$TEST_DIR/userdata/%N/%n/ttyrec-zork/"
+  ttyrecdir = "$TEST_DIR/userdata/%N/%n/zork/ttyrec/"
   max_idle_time = 3600
   encoding = "ascii"
 
   # Commands before game starts
-  commands = mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
+  commands = mkdir "$TEST_DIR/userdata/%N/%n/zork",
+             mkdir "$TEST_DIR/userdata/%N/%n/zork/ttyrec",
              setenv "DGL_USER" "%n",
-             setenv "DGAMELAUNCH_TEST_DIR" "$TEST_DIR",
              setenv "HOME" "$TEST_DIR/userdata/%N/%n/zork"
 }
 EOF
