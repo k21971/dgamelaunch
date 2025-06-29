@@ -1,7 +1,7 @@
 dnl dgamelaunch configure.ac
 dnl Required minimum autoconf version
 
-AC_INIT([dgamelaunch],[1.6.0-hdf])
+AC_INIT([dgamelaunch],[2.0.0-hdf])
 AC_PREREQ([2.69])
 
 AC_CONFIG_HEADERS([config.h])

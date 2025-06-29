@@ -1,3 +1,13 @@
+2.0.0-hdf (2025/06/29)
+	* Add comprehensive IP address logging
+	* Configurable debug log path w/ smart defaults
+	* Support for Zork and other Z-machine type games
+	* Add "ifnxsleep" command (config)
+	* Improved password handling
+	* Test environment build script that runs outside of a chroot
+	* Eliminated over 99% of all warnings during compilation, resulting
+	  in actual bug fixes and security hardening
+
 1.6.0-hdf (2018-2020)
 	* Enhanced watchmode - use game's built-in whatch function instead of
 	  ttyplay, when available (FIQ/Tangles)
