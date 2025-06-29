@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
 
     /* Execute frotz */
     execl("/bin/frotz", "frotz", "-q", "-f", "white", "-b", "blue",
+          "-l", "1", "-r", "1",
           zork_dat, (char *)NULL);
 
     /* If we get here, exec failed */

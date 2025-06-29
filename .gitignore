@@ -1,6 +1,6 @@
 
 # /
-/configure
+/configure*
 /Makefile
 /config.log
 /config.h
