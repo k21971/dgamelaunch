@@ -6,9 +6,9 @@ into dgamelaunch.
 ## Overview
 
 Zork I is a classic text adventure game that runs on the Z-machine
-virtual machine. To play it through dgamelaunch, we use `dfrotz` (the
-"dumb" interface version of frotz), which works better in multi-user
-environments.
+virtual machine. To play it through dgamelaunch, we use `frotz` which
+provides a full-featured interface with status line, colors, and dynamic
+terminal sizing.
 
 ## Important Requirements
 
@@ -51,18 +51,32 @@ sudo apt-get install frotz
 # This package includes both frotz and dfrotz
 ```
 
-### 2. Copy dfrotz to chroot
+### 2. Copy frotz to chroot
 ```bash
-sudo cp /usr/games/dfrotz /opt/nethack/chroot/bin/
+sudo cp /usr/games/frotz /opt/nethack/chroot/bin/
 ```
 
 ### 3. Copy required libraries
-dfrotz needs certain shared libraries. Find them with:
+frotz needs certain shared libraries. Find them with:
 ```bash
-ldd /usr/games/dfrotz
+ldd /usr/games/frotz
 ```
 
 Copy each library to the corresponding location in the chroot.
+
+In addition to the standard libraries needed for nethack, frotz requires
+these audio-related libraries:
+- libao.so.4 - Audio output library
+- libsndfile.so.1 - Sound file I/O library
+- libmodplug.so.1 - Module music library
+- libsamplerate.so.0 - Audio sample rate converter
+- libFLAC.so.12 - FLAC audio codec
+- libvorbis.so.0, libvorbisenc.so.2 - Vorbis audio codec
+- libopus.so.0 - Opus audio codec
+- libogg.so.0 - Ogg container format
+- libmpg123.so.0 - MP3 decoder
+- libmp3lame.so.0 - MP3 encoder
+- libmvec.so.1 - Vector math library
 
 ### 4. Add to dgamelaunch.conf
 
@@ -107,7 +121,7 @@ The `zork1-wrapper.c` program:
 2. Extracts first character for the `%N` directory
 3. Creates directory structure: `/dgldir/userdata/{initial}/{username}/zork`
 4. Changes to that directory for saves
-5. Executes dfrotz with proper security restrictions
+5. Executes frotz with the game file
 
 ## Directory Structure
 
@@ -137,7 +151,7 @@ User data is organized as:
 ### Connection closes immediately
 1. Check if `inprogressdir` is defined in the DEFINE block
 2. Verify the wrapper is compiled and in the correct location
-3. Check that dfrotz and Zork1.dat exist in the chroot
+3. Check that frotz and Zork1.dat exist in the chroot
 
 ### "Cannot open story file"
 The path to Zork1.dat in the wrapper must be relative to the chroot root.
@@ -145,8 +159,9 @@ If Zork1.dat is at `/opt/nethack/chroot/zork1/Zork1.dat`, the wrapper
 should use `/zork1/Zork1.dat`.
 
 ### Libraries not found
-Run `ldd /opt/nethack/chroot/bin/dfrotz` to check for missing
-libraries in the chroot.
+Run `ldd /opt/nethack/chroot/bin/frotz` to check for missing
+libraries in the chroot. Remember that frotz requires many audio
+libraries even though Zork doesn't use sound.
 
 ## Adding More Z-Machine Games
 
@@ -166,10 +181,10 @@ snprintf(zork_dat, sizeof(zork_dat), "/zork2/Zork2.dat");
 
 ## Security Considerations
 
-- dfrotz runs with `-R` flag to restrict file operations
-- Each user's saves are completely isolated
+- Each user's saves are completely isolated by changing to their directory
 - No access to system files or other users' data
 - The wrapper runs with dropped privileges via dgamelaunch
+- Frotz displays with white text on blue background for nostalgia
 
 ## Technical Notes
 
@@ -183,5 +198,5 @@ snprintf(zork_dat, sizeof(zork_dat), "/zork2/Zork2.dat");
 ## Credits
 
 - Zork I was created by Infocom
-- Frotz/dfrotz Z-machine interpreter by Stefan Jokisch and others
+- Frotz Z-machine interpreter by Stefan Jokisch and others
 - dgamelaunch C wrapper implementation for HDF (Hardfought)
