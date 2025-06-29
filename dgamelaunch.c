@@ -293,7 +293,6 @@ init_ip_database(sqlite3 *db)
 static void
 log_user_login(const char *username, const char *ip_address)
 {
-    sqlite3 *main_db = NULL;
     sqlite3 *ip_db = NULL;
     int ret;
     time_t now = time(NULL);
