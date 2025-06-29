@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     user_initial[1] = '\0';
 
     /* Build paths */
-    snprintf(user_base, sizeof(user_base), "/dgldir/userdata/%s/%s/zork",
+    snprintf(user_base, sizeof(user_base), "/dgldir/userdata/%s/%s/zork1",
              user_initial, username);
     snprintf(zork_dat, sizeof(zork_dat), "/zork1/Zork1.dat");
 

@@ -202,13 +202,13 @@ commands[register] = mkdir "$TEST_DIR/userdata/%N",
                      mkdir "$TEST_DIR/userdata/%N/%n",
                      mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
                      mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
-                     mkdir "$TEST_DIR/userdata/%N/%n/zork"
+                     mkdir "$TEST_DIR/userdata/%N/%n/zork1"
 
 commands[login] = mkdir "$TEST_DIR/userdata/%N",
                   mkdir "$TEST_DIR/userdata/%N/%n",
                   mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
                   mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
-                  mkdir "$TEST_DIR/userdata/%N/%n/zork",
+                  mkdir "$TEST_DIR/userdata/%N/%n/zork1",
                   setenv "HOME" "$TEST_DIR/dgldir"
 
 filemode = "0666"
@@ -249,15 +249,15 @@ DEFINE {
   short_name = "Zork1"
   game_args = "$TEST_DIR/bin/zork1-wrapper"
   inprogressdir = "$TEST_DIR/inprogress-zork1/"
-  ttyrecdir = "$TEST_DIR/userdata/%N/%n/zork/ttyrec/"
+  ttyrecdir = "$TEST_DIR/userdata/%N/%n/zork1/ttyrec/"
   max_idle_time = 3600
   encoding = "ascii"
 
   # Commands before game starts
-  commands = mkdir "$TEST_DIR/userdata/%N/%n/zork",
-             mkdir "$TEST_DIR/userdata/%N/%n/zork/ttyrec",
+  commands = mkdir "$TEST_DIR/userdata/%N/%n/zork1",
+             mkdir "$TEST_DIR/userdata/%N/%n/zork1/ttyrec",
              setenv "DGL_USER" "%n",
-             setenv "HOME" "$TEST_DIR/userdata/%N/%n/zork"
+             setenv "HOME" "$TEST_DIR/userdata/%N/%n/zork1"
 }
 EOF
 fi
