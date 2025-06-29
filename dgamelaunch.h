@@ -257,6 +257,7 @@ struct dg_globalconfig
     int menu_max_idle_time;
 
     char *debuglogfile; /* path to debug log file (when USE_DEBUGFILE) */
+    char *ip_database; /* path to separate IP logging database (when USE_SQLITE3) */
 };
 
 /* Global variables */

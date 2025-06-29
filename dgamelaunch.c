@@ -245,47 +245,88 @@ get_client_ip(void)
 /* ************************************************************* */
 
 #ifdef USE_SQLITE3
+/* Get IP database path - defaults to main_db_ip.db if not configured */
+static const char *
+get_ip_database_path(void)
+{
+    static char default_path[512];
+
+    if (globalconfig.ip_database)
+        return globalconfig.ip_database;
+
+    /* Default: append _ip.db to main database path */
+    if (globalconfig.passwd) {
+        const char *ext = strrchr(globalconfig.passwd, '.');
+        if (ext && strcmp(ext, ".db") == 0) {
+            size_t baselen = ext - globalconfig.passwd;
+            snprintf(default_path, sizeof(default_path), "%.*s_ip.db",
+                     (int)baselen, globalconfig.passwd);
+        } else {
+            snprintf(default_path, sizeof(default_path), "%s_ip.db",
+                     globalconfig.passwd);
+        }
+        return default_path;
+    }
+
+    return "/dgldir/dgamelaunch_ip.db"; /* Fallback */
+}
+
+/* Initialize IP database if it doesn't exist */
+static int
+init_ip_database(sqlite3 *db)
+{
+    const char *schema =
+        "CREATE TABLE IF NOT EXISTS user_ip_history ("
+        "    username TEXT NOT NULL,"
+        "    ip_address TEXT NOT NULL,"
+        "    first_seen INTEGER NOT NULL,"
+        "    last_seen INTEGER NOT NULL,"
+        "    connection_count INTEGER DEFAULT 1,"
+        "    PRIMARY KEY (username, ip_address)"
+        ");"
+        "CREATE INDEX IF NOT EXISTS idx_ip_history_last_seen ON user_ip_history(last_seen);";
+
+    return sqlite3_exec(db, schema, NULL, NULL, NULL);
+}
+
 /* Log user login with IP address (for regular logins) */
 static void
 log_user_login(const char *username, const char *ip_address)
 {
-    sqlite3 *db;
+    sqlite3 *main_db = NULL;
+    sqlite3 *ip_db = NULL;
     int ret;
     time_t now = time(NULL);
     char *qbuf;
 
     if (!username || !ip_address) return;
 
-    ret = sqlite3_open(globalconfig.passwd, &db);
-    if (ret) {
-        sqlite3_close(db);
-        return;  /* Non-fatal, just skip logging */
-    }
+    /* No longer update main database with IP info - all IP logging goes to separate database */
 
-    sqlite3_busy_timeout(db, 10000);
-
-    /* Update last login info in dglusers table */
-    qbuf = sqlite3_mprintf(
-        "UPDATE dglusers SET last_ip='%q', last_login_time=%ld WHERE username='%q'",
-        ip_address, (long)now, username
-    );
-    sqlite3_exec(db, qbuf, NULL, NULL, NULL);
-    sqlite3_free(qbuf);
-
-    /* Update IP history */
+    /* Update IP history in separate database */
     if (strcmp(ip_address, "unknown") != 0) {
-        qbuf = sqlite3_mprintf(
-            "INSERT INTO user_ip_history (username, ip_address, first_seen, last_seen, connection_count) "
-            "VALUES ('%q', '%q', %ld, %ld, 1) "
-            "ON CONFLICT(username, ip_address) DO UPDATE SET "
-            "last_seen=%ld, connection_count=connection_count+1",
-            username, ip_address, (long)now, (long)now, (long)now
-        );
-        sqlite3_exec(db, qbuf, NULL, NULL, NULL);
-        sqlite3_free(qbuf);
-    }
+        const char *ip_db_path = get_ip_database_path();
+        ret = sqlite3_open(ip_db_path, &ip_db);
+        if (ret == SQLITE_OK) {
+            sqlite3_busy_timeout(ip_db, 10000);
 
-    sqlite3_close(db);
+            /* Initialize database if needed */
+            init_ip_database(ip_db);
+
+            /* Insert/update IP history */
+            qbuf = sqlite3_mprintf(
+                "INSERT INTO user_ip_history (username, ip_address, first_seen, last_seen, connection_count) "
+                "VALUES ('%q', '%q', %ld, %ld, 1) "
+                "ON CONFLICT(username, ip_address) DO UPDATE SET "
+                "last_seen=%ld, connection_count=connection_count+1",
+                username, ip_address, (long)now, (long)now, (long)now
+            );
+            sqlite3_exec(ip_db, qbuf, NULL, NULL, NULL);
+            sqlite3_free(qbuf);
+
+            sqlite3_close(ip_db);
+        }
+    }
 }
 
 /* Log failed login attempt */

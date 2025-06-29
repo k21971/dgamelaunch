@@ -1,11 +1,24 @@
 #!/bin/bash
 # Cleanup script for dgamelaunch IP history
 # Run daily via cron to enforce 90-day retention policy
+# Supports both single database and separate IP database configurations
 
 # Configuration
-DB_PATH="/dgldir/dgamelaunch.db"  # Adjust to your actual path
+MAIN_DB_PATH="/dgldir/dgamelaunch.db"  # Main database path
+IP_DB_PATH=""  # Will be auto-detected if not set
 LOG_FILE="/var/log/dgamelaunch-ip-cleanup.log"
 RETENTION_DAYS=90
+
+# Auto-detect IP database path if not explicitly set
+if [ -z "$IP_DB_PATH" ]; then
+    # Check for separate IP database
+    if [ -f "${MAIN_DB_PATH%.db}_ip.db" ]; then
+        IP_DB_PATH="${MAIN_DB_PATH%.db}_ip.db"
+    else
+        # Fall back to main database (old configuration)
+        IP_DB_PATH="$MAIN_DB_PATH"
+    fi
+fi
 
 # Function to log messages
 log_message() {
@@ -14,32 +27,29 @@ log_message() {
 
 # Start cleanup
 log_message "Starting IP retention cleanup (${RETENTION_DAYS}-day policy)"
+log_message "Using IP database: $IP_DB_PATH"
 
 # Get counts before cleanup
-BEFORE_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM user_ip_history;" 2>/dev/null || echo "0")
-OLD_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM user_ip_history WHERE last_seen < strftime('%s', 'now', '-${RETENTION_DAYS} days');" 2>/dev/null || echo "0")
+BEFORE_COUNT=$(sqlite3 "$IP_DB_PATH" "SELECT COUNT(*) FROM user_ip_history;" 2>/dev/null || echo "0")
+OLD_COUNT=$(sqlite3 "$IP_DB_PATH" "SELECT COUNT(*) FROM user_ip_history WHERE last_seen < strftime('%s', 'now', '-${RETENTION_DAYS} days');" 2>/dev/null || echo "0")
 
 if [ "$OLD_COUNT" -gt 0 ]; then
     log_message "Found $OLD_COUNT IP records older than $RETENTION_DAYS days"
 
-    # Perform cleanup
-    sqlite3 "$DB_PATH" <<EOF
+    # Perform cleanup on IP database
+    sqlite3 "$IP_DB_PATH" <<EOF
 -- Delete old IP history
 DELETE FROM user_ip_history
 WHERE last_seen < strftime('%s', 'now', '-${RETENTION_DAYS} days');
-
--- Clear old IPs from user table
-UPDATE dglusers
-SET last_ip = NULL
-WHERE last_login_time < strftime('%s', 'now', '-${RETENTION_DAYS} days')
-  AND last_ip IS NOT NULL;
 
 -- Reclaim space
 VACUUM;
 EOF
 
+    # Main database no longer stores IP data - nothing to clean there
+
     # Get count after cleanup
-    AFTER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM user_ip_history;" 2>/dev/null || echo "0")
+    AFTER_COUNT=$(sqlite3 "$IP_DB_PATH" "SELECT COUNT(*) FROM user_ip_history;" 2>/dev/null || echo "0")
     REMOVED=$((BEFORE_COUNT - AFTER_COUNT))
 
     log_message "Cleanup complete. Removed $REMOVED records. Remaining: $AFTER_COUNT"
@@ -48,8 +58,8 @@ else
 fi
 
 # Optional: Log current statistics
-UNIQUE_USERS=$(sqlite3 "$DB_PATH" "SELECT COUNT(DISTINCT username) FROM user_ip_history;" 2>/dev/null || echo "0")
-UNIQUE_IPS=$(sqlite3 "$DB_PATH" "SELECT COUNT(DISTINCT ip_address) FROM user_ip_history;" 2>/dev/null || echo "0")
+UNIQUE_USERS=$(sqlite3 "$IP_DB_PATH" "SELECT COUNT(DISTINCT username) FROM user_ip_history;" 2>/dev/null || echo "0")
+UNIQUE_IPS=$(sqlite3 "$IP_DB_PATH" "SELECT COUNT(DISTINCT ip_address) FROM user_ip_history;" 2>/dev/null || echo "0")
 
 log_message "Current stats: $UNIQUE_USERS users from $UNIQUE_IPS unique IPs"
 

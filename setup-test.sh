@@ -61,7 +61,9 @@ echo "  - Test directory: $TEST_DIR"
 echo "  - Config file: $CONFIG_PATH"
 if [ "$BUILD_TYPE" = "sqlite" ]; then
     echo "  - SQLite database: $DB_PATH"
+    echo "  - IP database: ${DB_PATH%.db}_ip.db (separate IP logging)"
     echo "  - IP address logging enabled (tracks logins and connections)"
+    echo "  - Supports multi-server deployments (IP data won't be overwritten by rsync)"
 fi
 echo "  - Debug logging enabled (failed logins, errors)"
 echo ""

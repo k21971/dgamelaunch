@@ -134,21 +134,9 @@ CREATE TABLE IF NOT EXISTS dglusers (
     email TEXT,
     env TEXT,
     password TEXT,
-    flags INTEGER DEFAULT 0,
-    last_ip TEXT DEFAULT NULL,
-    last_login_time INTEGER DEFAULT NULL
+    flags INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_username ON dglusers(username);
-
-CREATE TABLE IF NOT EXISTS user_ip_history (
-    username TEXT NOT NULL,
-    ip_address TEXT NOT NULL,
-    first_seen INTEGER NOT NULL,
-    last_seen INTEGER NOT NULL,
-    connection_count INTEGER DEFAULT 1,
-    PRIMARY KEY (username, ip_address)
-);
-CREATE INDEX IF NOT EXISTS idx_ip_history_last_seen ON user_ip_history(last_seen);
 EOF
     else
         echo "Using existing SQLite database"
@@ -193,6 +181,9 @@ banner = "$TEST_DIR/dgl-banner"
 
 # Debug log (if compiled with --enable-debugfile)
 debuglogfile = "$TEST_DIR/dgldebug.log"
+
+# Separate IP database for multi-server deployments
+ip_database = "$TEST_DIR/dgamelaunch_ip.db"
 EOF
 
 # Add database-specific config
@@ -397,6 +388,11 @@ fi
 echo ""
 echo "=== Test Environment Ready ==="
 echo "Build type: $BUILD_TYPE"
+if [ "$BUILD_TYPE" = "sqlite" ]; then
+    echo "IP logging: Separate database (dgamelaunch_ip.db)"
+    echo "  - IP history preserved across server syncs"
+    echo "  - Each server maintains its own IP logs"
+fi
 echo "Games available:"
 echo "  - NetHack 3.6.7"
 if [ $ZORK_AVAILABLE -eq 1 ]; then
