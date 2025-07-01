@@ -9,6 +9,11 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC(cc gcc)
 AC_CHECK_INCLUDES_DEFAULT
 
+dnl Set default CFLAGS if not already set by user
+if test -z "$CFLAGS"; then
+  CFLAGS="-g3 -O0 -Wall -Wextra -Wshadow -Wwrite-strings -Wformat=2 -Wformat-security -Wstrict-prototypes -Wmissing-prototypes"
+fi
+
 AC_PROG_LEX
 if test -z "$LEX"; then
    AC_MSG_ERROR([lex or flex not found.])
