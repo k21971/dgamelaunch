@@ -2921,14 +2921,13 @@ writefile (int requirenew)
 
     char *qbuf;
     const char *client_ip = get_client_ip();
-    time_t now = time(NULL);
 
     if (requirenew) {
-	qbuf = sqlite3_mprintf("insert into dglusers (username, email, env, password, flags, last_ip, last_login_time) values ('%q', '%q', '%q', '%q', %li, '%q', %ld)",
-	                       me->username, me->email, me->env, me->password, me->flags, client_ip, (long)now);
+	qbuf = sqlite3_mprintf("insert into dglusers (username, email, env, password, flags) values ('%q', '%q', '%q', '%q', %li)",
+	                       me->username, me->email, me->env, me->password, me->flags);
     } else {
-	qbuf = sqlite3_mprintf("update dglusers set username='%q', email='%q', env='%q', password='%q', flags=%li, last_ip='%q', last_login_time=%ld where id=%i",
-	                       me->username, me->email, me->env, me->password, me->flags, client_ip, (long)now, me->id);
+	qbuf = sqlite3_mprintf("update dglusers set username='%q', email='%q', env='%q', password='%q', flags=%li where id=%i",
+	                       me->username, me->email, me->env, me->password, me->flags, me->id);
     }
 
     ret = sqlite3_open(globalconfig.passwd, &db);
@@ -2949,20 +2948,10 @@ writefile (int requirenew)
 	graceful_exit(98);
     }
 
-    /* Log to IP history table (optional - ignore errors) */
-    if (strcmp(client_ip, "unknown") != 0) {
-	qbuf = sqlite3_mprintf(
-	    "INSERT INTO user_ip_history (username, ip_address, first_seen, last_seen, connection_count) "
-	    "VALUES ('%q', '%q', %ld, %ld, 1) "
-	    "ON CONFLICT(username, ip_address) DO UPDATE SET "
-	    "last_seen=%ld, connection_count=connection_count+1",
-	    me->username, client_ip, (long)now, (long)now, (long)now
-	);
-	sqlite3_exec(db, qbuf, NULL, NULL, NULL);  /* Ignore errors for history table */
-	sqlite3_free(qbuf);
-    }
-
     sqlite3_close(db);
+
+    /* Log IP to separate database */
+    log_user_login(me->username, client_ip);
 }
 #endif
 

@@ -138,6 +138,20 @@ CREATE TABLE IF NOT EXISTS dglusers (
 );
 CREATE INDEX IF NOT EXISTS idx_username ON dglusers(username);
 EOF
+
+        # Initialize separate IP database
+        echo "Initializing IP database..."
+        sqlite3 "$TEST_DIR/dgamelaunch_ip.db" << 'EOF'
+CREATE TABLE IF NOT EXISTS user_ip_history (
+    username TEXT NOT NULL,
+    ip_address TEXT NOT NULL,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    connection_count INTEGER DEFAULT 1,
+    PRIMARY KEY (username, ip_address)
+);
+CREATE INDEX IF NOT EXISTS idx_ip_history_last_seen ON user_ip_history(last_seen);
+EOF
     else
         echo "Using existing SQLite database"
         # Show existing users
