@@ -1,14 +1,14 @@
 QUICK START INSTALL ON LINUX
 ============================
 
-This is known to work on Ubuntu 16.04 and 18.04, but should work elsewhere with
-minimal change.
+This is known to work on Ubuntu 16.04 through 24.04, but should work
+elsewhere with minimal change.
 
 
 To build:
 
- ./autogen.sh --with-config-file=/opt/nethack/dgamelaunch.conf --enable-shmem --enable-sqlite
- make
+ ./autogen.sh --enable-sqlite --enable-shmem --enable-debugfile --with-config-file=/opt/nethack/dgamelaunch.conf
+ make all
 
 
 To install (fresh install):
