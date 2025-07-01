@@ -6,11 +6,14 @@ AC_PREREQ([2.69])
 
 AC_CONFIG_HEADERS([config.h])
 
+dnl Save user's CFLAGS before AC_PROG_CC sets defaults
+user_cflags="$CFLAGS"
+
 AC_PROG_CC(cc gcc)
 AC_CHECK_INCLUDES_DEFAULT
 
-dnl Set default CFLAGS if not already set by user
-if test -z "$CFLAGS"; then
+dnl Set our CFLAGS if user didn't specify any
+if test -z "$user_cflags"; then
   CFLAGS="-g3 -O0 -Wall -Wextra -Wshadow -Wwrite-strings -Wformat=2 -Wformat-security -Wstrict-prototypes -Wmissing-prototypes"
 fi
 
