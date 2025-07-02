@@ -3070,17 +3070,32 @@ static Byte *text_yank(Byte * p, Byte * q, int dest)  // copy text into a regist
   Byte *t;
   int cnt;
 
+  // Validate destination register
+  if (dest < 0 || dest >= 28) {
+      return (p);  // invalid register number
+  }
+
   if (q < p) {			// they are backwards- reverse them
       t = q;
       q = p;
       p = t;
   }
   cnt = q - p + 1;
+
+  // Defensive check: ensure cnt is reasonable
+  if (cnt <= 0 || cnt > 100000) {  // 100KB should be more than enough for a line
+      return (p);  // don't yank if size is suspicious
+  }
+
   t = reg[dest];
   if (t != 0) {			// if already a yank register
       free (t);                 //   free it
+      reg[dest] = 0;            // clear pointer immediately after free
   }
   t = (Byte *) malloc (cnt + 1);  // get a new register
+  if (t == NULL) {              // check malloc success
+      return (p);               // bail out if malloc fails
+  }
   memset (t, '\0', cnt + 1);    // clear new text[]
   strncpy ((char *) t, (char *) p, cnt);  // copy text[] into bufer
   reg[dest] = t;
