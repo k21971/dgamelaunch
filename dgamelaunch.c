@@ -414,16 +414,22 @@ get_mainmenu_name()
 char*
 gen_ttyrec_filename ()
 {
-  time_t rawtime;
+  struct timeval tv;
   struct tm *ptm;
   char *ttyrec_filename = calloc(100, sizeof(char));
+  int milliseconds;
 
-  /* append time to filename */
-  time (&rawtime);
-  ptm = gmtime (&rawtime);
-  snprintf (ttyrec_filename, 100, "%04i-%02i-%02i.%02i:%02i:%02i.ttyrec",
+  /* get time with microsecond precision */
+  gettimeofday(&tv, NULL);
+  ptm = gmtime (&tv.tv_sec);
+
+  /* convert microseconds to milliseconds */
+  milliseconds = tv.tv_usec / 1000;
+
+  /* append time to filename with millisecond precision */
+  snprintf (ttyrec_filename, 100, "%04i-%02i-%02i.%02i:%02i:%02i.%03i.ttyrec",
             ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday,
-            ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+            ptm->tm_hour, ptm->tm_min, ptm->tm_sec, milliseconds);
   return ttyrec_filename;
 }
 
