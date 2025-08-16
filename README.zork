@@ -19,10 +19,11 @@ terminal sizing.
 
 ## Quick Start
 
-1. Ensure you have the Zork I data file (`Zork1.dat`)
+1. Ensure you have the Zork I data file (`zork1.z3`)
+   Latest data file can be found at https://github.com/historicalsource/zork1
 2. Compile the wrapper:
    ```bash
-   gcc -O2 -Wall -o zork1-wrapper zork1-wrapper.c
+   gcc -g3 -O0 -Wall -o zork1-wrapper zork1-wrapper.c
    ```
 3. Copy files to chroot (adjust paths as needed):
    ```bash
@@ -95,12 +96,12 @@ DEFINE {
     max_idle_time = 3600
     
     # User directory structure: /dgldir/userdata/{first_letter}/{username}/zork
-    ttyrecdir = "%ruserdata/%N/%n/zork/ttyrec/"
+    ttyrecdir = "%ruserdata/%N/%n/zork1/ttyrec/"
     
-    commands = mkdir "%ruserdata/%N/%n/zork",
-               mkdir "%ruserdata/%N/%n/zork/ttyrec",
+    commands = mkdir "%ruserdata/%N/%n/zork1",
+               mkdir "%ruserdata/%N/%n/zork1/ttyrec",
                setenv "DGL_USER" "%n",
-               setenv "HOME" "%ruserdata/%N/%n/zork"
+               setenv "HOME" "%ruserdata/%N/%n/zork1"
     
     encoding = "ascii"
     
@@ -119,7 +120,7 @@ commands["z"] = play_game "zork1"
 The `zork1-wrapper.c` program:
 1. Gets username from `DGL_USER` environment variable
 2. Extracts first character for the `%N` directory
-3. Creates directory structure: `/dgldir/userdata/{initial}/{username}/zork`
+3. Creates directory structure: `/dgldir/userdata/{initial}/{username}/zork1`
 4. Changes to that directory for saves
 5. Executes frotz with the game file
 
@@ -130,19 +131,19 @@ User data is organized as:
 /dgldir/userdata/
 ├── j/
 │   └── johndoe/
-│       └── zork/
+│       └── zork1/
 │           ├── ttyrec/
 │           └── *.sav (save files)
 └── m/
     └── mary/
-        └── zork/
+        └── zork1/
             ├── ttyrec/
             └── *.sav (save files)
 ```
 
 ## Save Games
 
-- Save games are stored in `/dgldir/userdata/{initial}/{username}/zork/`
+- Save games are stored in `/dgldir/userdata/{initial}/{username}/zork1/`
 - Each user's saves are isolated
 - Use the SAVE and RESTORE commands within Zork
 
@@ -151,12 +152,12 @@ User data is organized as:
 ### Connection closes immediately
 1. Check if `inprogressdir` is defined in the DEFINE block
 2. Verify the wrapper is compiled and in the correct location
-3. Check that frotz and Zork1.dat exist in the chroot
+3. Check that frotz and zork1.z3 exist in the chroot
 
 ### "Cannot open story file"
-The path to Zork1.dat in the wrapper must be relative to the chroot root.
-If Zork1.dat is at `/opt/nethack/chroot/zork1/Zork1.dat`, the wrapper
-should use `/zork1/Zork1.dat`.
+The path to zork1.z3 in the wrapper must be relative to the chroot root.
+If zork1.z3 is at `/opt/nethack/chroot/zork1/zork1.z3`, the wrapper
+should use `/zork1/zork1.z3`.
 
 ### Libraries not found
 Run `ldd /opt/nethack/chroot/bin/frotz` to check for missing
@@ -176,7 +177,7 @@ To add other Infocom games:
 Example for Zork II:
 ```c
 // In zork2-wrapper.c, change:
-snprintf(zork_dat, sizeof(zork_dat), "/zork2/Zork2.dat");
+snprintf(zork_dat, sizeof(zork_dat), "/zork2/zork2.z3");
 ```
 
 ## Security Considerations
