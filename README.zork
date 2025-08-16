@@ -30,7 +30,7 @@ terminal sizing.
    sudo cp zork1-wrapper /opt/nethack/chroot/bin/
    sudo chmod 755 /opt/nethack/chroot/bin/zork1-wrapper
    sudo mkdir -p /opt/nethack/chroot/zork1
-   sudo cp Zork1.dat /opt/nethack/chroot/zork1/
+   sudo cp zork1.z3 /opt/nethack/chroot/zork1/
    ```
 4. Add the Zork configuration to your dgamelaunch.conf (see below)
 5. Create the inprogress directory:
