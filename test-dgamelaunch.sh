@@ -52,18 +52,24 @@ if [ ! -f "$SCRIPT_DIR/ee" ] || [ ! -f "$SCRIPT_DIR/virus" ]; then
     exit 1
 fi
 
-# Check for Zork support
+# Check for Zork support - prefer newer z3 file
 ZORK_AVAILABLE=0
-if [ -f "$ZORK_PATH/Zork1.dat" ] && (command -v dfrotz >/dev/null 2>&1 || command -v frotz >/dev/null 2>&1); then
+ZORK_SOURCE=""
+if [ -f "/home/build/zork1/COMPILED/zork1.z3" ]; then
+    ZORK_SOURCE="/home/build/zork1/COMPILED/zork1.z3"
     ZORK_AVAILABLE=1
-    echo "Zork I support detected"
-else
-    if [ ! -f "$ZORK_PATH/Zork1.dat" ]; then
-        echo "NOTE: Zork1.dat not found at $ZORK_PATH - Zork will not be available"
-    fi
-    if ! command -v dfrotz >/dev/null 2>&1 && ! command -v frotz >/dev/null 2>&1; then
-        echo "NOTE: frotz/dfrotz not installed - Zork will not be available"
-    fi
+    echo "Zork I support detected (using newer z3 version)"
+elif [ -f "$ZORK_PATH/Zork1.dat" ]; then
+    ZORK_SOURCE="$ZORK_PATH/Zork1.dat"
+    ZORK_AVAILABLE=1
+    echo "Zork I support detected (using original dat version)"
+fi
+
+if [ $ZORK_AVAILABLE -eq 1 ] && ! (command -v dfrotz >/dev/null 2>&1 || command -v frotz >/dev/null 2>&1); then
+    ZORK_AVAILABLE=0
+    echo "NOTE: frotz/dfrotz not installed - Zork will not be available"
+elif [ $ZORK_AVAILABLE -eq 0 ]; then
+    echo "NOTE: No Zork data file found - Zork will not be available"
 fi
 
 # Create directory structure if needed
@@ -108,9 +114,9 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
     fi
 
     # Copy Zork data file to test environment (simulate chroot structure)
-    if [ -f "$ZORK_PATH/Zork1.dat" ]; then
+    if [ -n "$ZORK_SOURCE" ]; then
         mkdir -p "$TEST_DIR/$ZORK_PATH"
-        cp "$ZORK_PATH/Zork1.dat" "$TEST_DIR/$ZORK_PATH/"
+        cp "$ZORK_SOURCE" "$TEST_DIR/$ZORK_PATH/Zork1.dat"
     fi
 fi
 

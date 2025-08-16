@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     /* Build paths */
     snprintf(user_base, sizeof(user_base), "/dgldir/userdata/%s/%s/zork1",
              user_initial, username);
-    snprintf(zork_dat, sizeof(zork_dat), "/zork1/Zork1.dat");
+    snprintf(zork_dat, sizeof(zork_dat), "/zork1/zork1.z3");
 
     /* Create user directory if needed */
     if (stat(user_base, &st) != 0) {

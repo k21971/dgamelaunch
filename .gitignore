@@ -19,6 +19,9 @@
 /*.swp
 /autom4te.cache
 /CLAUDE.md
+/BUILD.md
+/HISTORY.md
 /*.log
 /*.txt
 /*.conf
+/*.backup
