@@ -77,7 +77,7 @@ static int sortmode_number(const char *sortmode_name) {
 %token <s> TYPE_VALUE
 %token <i> TYPE_NUMBER TYPE_CMDQUEUENAME
 %type  <kt> KeyType
-%token <i> TYPE_DGLCMD0 TYPE_DGLCMD1 TYPE_DGLCMD2
+%token <i> TYPE_DGLCMD0 TYPE_DGLCMD1 TYPE_DGLCMD2 TYPE_DGLCMD3
 %token TYPE_DEFINE_GAME
 %token <i> TYPE_BOOL
 %token TYPE_PATH_WATCH TYPE_WATCH_ARGS TYPE_WATCHCMDQUEUE
@@ -665,6 +665,7 @@ dglcmd	: TYPE_DGLCMD1 TYPE_VALUE
 		  tmp->next = NULL;
 		  tmp->param1 = strdup( $2 );
 		  tmp->param2 = NULL;
+		  tmp->param3 = NULL;
 		  tmp->cmd = $<i>1;
 
 	      }
@@ -681,6 +682,7 @@ dglcmd	: TYPE_DGLCMD1 TYPE_VALUE
 		  tmp->next = NULL;
 		  tmp->param1 = NULL;
 		  tmp->param2 = NULL;
+		  tmp->param3 = NULL;
 		  tmp->cmd = $<i>1;
 	      }
 	  }
@@ -696,6 +698,23 @@ dglcmd	: TYPE_DGLCMD1 TYPE_VALUE
 		  tmp->next = NULL;
 		  tmp->param1 = strdup( $2 );
 		  tmp->param2 = strdup( $3 );
+		  tmp->param3 = NULL;
+		  tmp->cmd = $<i>1;
+	      }
+	  }
+	| TYPE_DGLCMD3 TYPE_VALUE TYPE_VALUE TYPE_VALUE
+	  {
+	      struct dg_cmdpart *tmp = malloc(sizeof(struct dg_cmdpart));
+	      if (tmp) {
+		  struct dg_cmdpart *foo = curr_cmdqueue;
+		  if (foo) {
+		      while (foo->next) foo = foo->next;
+		      foo->next = tmp;
+		  } else curr_cmdqueue = tmp;
+		  tmp->next = NULL;
+		  tmp->param1 = strdup( $2 );
+		  tmp->param2 = strdup( $3 );
+		  tmp->param3 = strdup( $4 );
 		  tmp->cmd = $<i>1;
 	      }
 	  }

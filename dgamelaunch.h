@@ -83,8 +83,9 @@ typedef enum
     DGLCMD_SUBMENU,	/* submenu "foo" */
     DGLCMD_REDRAW,	/* redraw */
     DGLCMD_RETURN,	/* return */
-    DGLCMD_SLEEP,       /* sleep foo */
-    DGLCMD_IF_NX_SLEEP, /* ifnxsleep foo bar */
+    DGLCMD_SLEEP,       /* sleep "time" */
+    DGLCMD_IF_NX_SLEEP, /* ifnxsleep "time" "file" */
+    DGLCMD_IF_NX_PL_SLEEP, /* ifnxplslp "time" "file" "plname" */
 } dglcmd_actions;
 
 typedef enum
@@ -118,6 +119,7 @@ struct dg_cmdpart
     dglcmd_actions cmd;
     char *param1;
     char *param2;
+    char *param3;
     struct dg_cmdpart *next;
 };
 

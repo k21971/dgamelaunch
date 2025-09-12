@@ -291,8 +291,7 @@ int
 dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername)
 {
     struct dg_cmdpart *tmp = queue;
-    char *p1;
-    char *p2;
+    char *p1, *p2, *p3;
     int played = 0;
 
     if (!queue) return 1;
@@ -302,6 +301,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
     while (tmp && !return_from_submenu) {
 	p1 = tmp->param1 ? dgl_format_str(game, me, tmp->param1, playername) : NULL;
 	p2 = tmp->param2 ? dgl_format_str(game, me, tmp->param2, playername) : NULL;
+	p3 = tmp->param3 ? dgl_format_str(game, me, tmp->param3, playername) : NULL;
 
 	switch (tmp->cmd) {
 	default: break;
@@ -463,6 +463,13 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	case DGLCMD_RETURN:
 	    return_from_submenu = 1;
 	    break;
+	case DGLCMD_IF_NX_PL_SLEEP:
+	    if (!(loggedin && me && p3))
+		break;
+	    if (strcasecmp(me->username, p3) != 0)
+		break;
+	    /* fall through if p3 matches me->username */
+	    /* FALLTHROUGH */
 	case DGLCMD_IF_NX_SLEEP:
 	    if (p2) {
 		FILE *tmpfile;
@@ -567,6 +574,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	tmp = tmp->next;
         if (p1) free(p1);
         if (p2) free(p2);
+        if (p3) free(p3);
     }
     return 0;
 }
