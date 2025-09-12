@@ -145,6 +145,7 @@ rawprint	{ yylval.i = DGLCMD_RAWPRINT;    return TYPE_DGLCMD1; }
 sleep		{ yylval.i = DGLCMD_SLEEP;       return TYPE_DGLCMD1; }
 ifnxsleep	{ yylval.i = DGLCMD_IF_NX_SLEEP; return TYPE_DGLCMD2; }
 ifnxplslp	{ yylval.i = DGLCMD_IF_NX_PL_SLEEP; return TYPE_DGLCMD3; }
+ifnxipslp	{ yylval.i = DGLCMD_IF_NX_IP_SLEEP; return TYPE_DGLCMD3; }
 DEFINE		{ return TYPE_DEFINE_GAME; }
 
 \n		{ line++; col = 0; }

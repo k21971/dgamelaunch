@@ -253,7 +253,8 @@ DEFINE {
              ifnxcp "$TEST_DIR/default.nethackrc" "$TEST_DIR/userdata/%N/%n/nethackrc",
              setenv "NETHACKOPTIONS" "@$TEST_DIR/userdata/%N/%n/nethackrc",
              setenv "MAIL" "$TEST_DIR/var/mail/%n",
-             setenv "SIMPLEMAIL" "1"
+             setenv "SIMPLEMAIL" "1",
+             ifnxplslp "5" "$NETHACK_PATH/var/save/%u%n.gz" "test"
 }
 EOF
 

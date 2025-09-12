@@ -86,6 +86,7 @@ typedef enum
     DGLCMD_SLEEP,       /* sleep "time" */
     DGLCMD_IF_NX_SLEEP, /* ifnxsleep "time" "file" */
     DGLCMD_IF_NX_PL_SLEEP, /* ifnxplslp "time" "file" "plname" */
+    DGLCMD_IF_NX_IP_SLEEP, /* ifnxipslp "time" "file" "ipaddr" */
 } dglcmd_actions;
 
 typedef enum
@@ -310,6 +311,7 @@ extern struct dg_menu *dgl_find_menu(const char *menuname);
 
 extern int dgl_exec_cmdqueue(struct dg_cmdpart *queue, int game, struct dg_user *me);
 extern int dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername);
+extern const char *get_client_ip(void);
 
 extern void free_populated_games(struct dg_game **games, int len);
 extern struct dg_game **populate_games(int game, int *l, struct dg_user *me);

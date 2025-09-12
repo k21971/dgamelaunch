@@ -198,7 +198,7 @@ mysetenv (const char* name, const char* value, int overwrite)
  * Returns static buffer with IP address or "unknown" if not found
  * Supports both IPv4 and IPv6 addresses
  */
-static const char *
+const char *
 get_client_ip(void)
 {
     static char ip_buffer[64];

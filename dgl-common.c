@@ -470,6 +470,16 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		break;
 	    /* fall through if p3 matches me->username */
 	    /* FALLTHROUGH */
+	case DGLCMD_IF_NX_IP_SLEEP:
+	    if (tmp->cmd == DGLCMD_IF_NX_IP_SLEEP) {
+		const char *current_ip = get_client_ip();
+		if (!p3 || !current_ip)
+		    break;
+		if (strcasecmp(current_ip, p3) != 0)
+		    break;
+		/* fall through if p3 matches current IP */
+	    }
+	    /* FALLTHROUGH */
 	case DGLCMD_IF_NX_SLEEP:
 	    if (p2) {
 		FILE *tmpfile;
