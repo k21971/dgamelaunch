@@ -253,8 +253,12 @@ DEFINE {
              ifnxcp "$TEST_DIR/default.nethackrc" "$TEST_DIR/userdata/%N/%n/nethackrc",
              setenv "NETHACKOPTIONS" "@$TEST_DIR/userdata/%N/%n/nethackrc",
              setenv "MAIL" "$TEST_DIR/var/mail/%n",
-             setenv "SIMPLEMAIL" "1",
-             ifnxplslp "5" "$NETHACK_PATH/var/save/%u%n.gz" "test"
+             setenv "SIMPLEMAIL" "1"
+             # Delay commands based on player name and IP address.
+             # Be sure to add a comma at the end of the SIMPLEMAIL line
+             # above if these are uncommented
+             #ifnxplslp "5" "$NETHACK_PATH/var/save/%u%n.gz" "test",
+             #ifnxipslp "5" "$NETHACK_PATH/var/save/%u%n.gz" "192.168.2.14"
 }
 EOF
 
