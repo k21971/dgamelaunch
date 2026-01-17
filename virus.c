@@ -668,7 +668,7 @@ cd0:
               readbuffer[rbi++] = chars[((int) lrand48 () % strlen (chars))];
             } else if (thing == 1) {	// insert words
 	      strlcat((char *) readbuffer, words[(int) lrand48() % 20], BUFSIZ); /* FIXED added BUFSIZ and converted to strlcat() */
-              strcat ((char *) readbuffer, " ");
+              strlcat ((char *) readbuffer, " ", BUFSIZ);
               sleeptime = 0;    // how fast to type
             } else if (thing == 2) {	// insert lines
 	      strlcat((char *) readbuffer, lines[(int) lrand48() % 20], BUFSIZ); /* FIXED added BUFSIZ and converted to strlcat() */
@@ -678,7 +678,7 @@ cd0:
               sleeptime = 0;    // how fast to type
             }
         }
-      strcat ((char *) readbuffer, "\033");
+      strlcat ((char *) readbuffer, "\033", BUFSIZ);
     }
 cd1:
   totalcmds++;
@@ -1634,6 +1634,8 @@ static Byte *get_one_address(Byte * p, int *addr)	// get colon addr, if present
       for (p++; *p; p++) {
           if (*p == '/')
             break;
+          if (q - buf >= BUFSIZ - 1)
+            break;  /* prevent buffer overflow */
           *q++ = *p;
       }
       *q = '\0';
@@ -3457,7 +3459,8 @@ static Byte *get_input_line(Byte * prompt)  // get input line- use "status line"
   static Byte *obufp = NULL;
 
   /* FIXED strcpy((char *) buf, (char *) prompt); */
-  if (strlcpy((char *) buf, (char *) prompt, sizeof((char *)buf)) > sizeof ((char *) buf))  err(1, "strlcpy overflow in function get_input_line");
+  if (strlcpy((char *) buf, (char *) prompt, sizeof(buf)) >= sizeof(buf))
+      err(1, "strlcpy overflow in function get_input_line");
   *status_buffer = '\0';        // clear the status buffer
   place_cursor (rows - 1, 0, FALSE);  // go to Status line, bottom of screen
   clear_to_eol ();              // clear the line

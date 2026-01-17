@@ -92,7 +92,7 @@ cp "$SCRIPT_DIR/virus" "$TEST_DIR/bin/"
 if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
     echo "Compiling Zork wrapper..."
     # Create a temporary version with test paths
-    sed -e "s|/zork1/Zork1.dat|$ZORK_PATH/Zork1.dat|g" \
+    sed -e "s|/zork1/zork1.z3|$TEST_DIR$ZORK_PATH/Zork1.dat|g" \
         -e "s|/dgldir/userdata|$TEST_DIR/userdata|g" \
         -e "s|/bin/frotz|$TEST_DIR/bin/frotz|g" \
         "$SCRIPT_DIR/zork1-wrapper.c" > "$TEST_DIR/zork1-wrapper-test.c"

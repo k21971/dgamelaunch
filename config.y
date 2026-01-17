@@ -638,6 +638,11 @@ definegame : TYPE_DEFINE_GAME '{'
 	    }
 
 	    tmpconfig[ncnf] = calloc(1, sizeof(struct dg_config));
+	    if (!tmpconfig[ncnf]) {
+		fprintf(stderr, "%s:%d: could not allocate memory for game config, bailing out\n",
+			config, line);
+		exit(1);
+	    }
 	    myconfig = tmpconfig;
 	}
 	game_definitions '}'

@@ -157,12 +157,14 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
                gpr = getpref(varname, fallback);
                *f = '}'; /* put back how we found it */
                if (fallback) *(fallback-1) = ':';
-               if (firstchar) {
-                   snprintf(p, end + 1 - p, "%c", gpr[0]);
-                   firstchar = 0;
-               } else
-                   snprintf(p, end + 1 - p, "%s", gpr);
-               if (gpr) free(gpr);
+               if (gpr) {
+                   if (firstchar) {
+                       snprintf(p, end + 1 - p, "%c", gpr[0]);
+                       firstchar = 0;
+                   } else
+                       snprintf(p, end + 1 - p, "%s", gpr);
+                   free(gpr);
+               }
                for (; *p; p++);
                varname = fallback = NULL;
            }
@@ -340,7 +342,10 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		size_t bytes;
 		/* FIXME: use nethack-themed error messages here, as per write_canned_rcfile() */
 		if (!(cannedf = fopen (p1, "r"))) break;
-		if (!(newfile = fopen (p2, "w"))) break;
+		if (!(newfile = fopen (p2, "w"))) {
+		    fclose (cannedf);
+		    break;
+		}
 		while ((bytes = fread (buf, 1, 1024, cannedf)) > 0) {
 		    if (fwrite (buf, 1, bytes, newfile) != bytes) {
 			if (ferror (newfile)) {
@@ -369,6 +374,10 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		int isspace = 1;
 		int i;
                 char *p2_unformat = strdup(tmp->param2);
+		if (!p2_unformat) {
+		    debug_write("exec-command strdup failed");
+		    break;
+		}
 		for (p = p2_unformat; *p; p++) {
 		    if (*p == ' ') {
 		        isspace++;
@@ -405,7 +414,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
                         free(myargv[i]);
                     }
                     free (myargv);
-		    waitpid(child, NULL, 0);
+		    waitpid(exec_child, NULL, 0);
                 }
 		idle_alarm_set_enabled(1);
 		initcurses();
@@ -937,7 +946,7 @@ populate_games (int xgame, int *l, struct dg_user *me)
           /* clean dead ones */
           unlink (fullname);
         }
-      close (fd);
+      if (fd >= 0) close (fd);
 
       fl.l_type = F_WRLCK;
     }

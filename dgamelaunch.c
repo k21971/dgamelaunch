@@ -647,6 +647,12 @@ banner_var_add(char *name, char *value, int special)
 
     tmp->name = strdup(name);
     tmp->value = strdup(value);
+    if (!tmp->name || !tmp->value) {
+        free(tmp->name);
+        free(tmp->value);
+        free(tmp);
+        return;
+    }
     tmp->special = special;
     tmp->next = globalconfig.banner_var_list;
     globalconfig.banner_var_list = tmp;
@@ -1395,7 +1401,7 @@ inprogressmenu (int gameid)
 		(void) time(&ctime);
 		do {
 		    idx = random() % len;
-		} while ((--cnt > 0) ||
+		} while ((--cnt > 0) &&
 			 !((games[idx]->ws_col <= COLS) &&
 			  (games[idx]->ws_row <= LINES) &&
 			  ((ctime - games[idx]->idle_time) < 15)));
@@ -1580,6 +1586,7 @@ watchgame:
 	      if (games[idx]->is_in_shm) {
 		  hup_shm_idx = -1;
 		  free(hup_shm_ttyrec_fn);
+		  hup_shm_ttyrec_fn = NULL;
 		  shm_sem_wait(shm_dg_data);
 		  if (shm_dg_game[shm_idx].in_use &&
 		      !strcmp(shm_dg_game[shm_idx].ttyrec_fn, games[idx]->ttyrec_fn) &&
