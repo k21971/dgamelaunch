@@ -1,3 +1,14 @@
+2.0.1-hdf (2026/01/17)
+	* Fix wrong variable in waitpid() after fork (dgl-common.c)
+	* Fix logic error in random game selection (dgamelaunch.c)
+	* Fix file handle leak in DGLCMD_CP (dgl-common.c)
+	* Convert unsafe strcat() to strlcat() (virus.c)
+	* Fix sizeof() pointer bug in get_input_line (virus.c)
+	* Add missing NULL checks after strdup/calloc/getpref
+	* Fix race condition with hup_shm_ttyrec_fn (dgamelaunch.c)
+	* Add bounds check for search pattern copy (virus.c)
+	* Fix Zork wrapper path in test script
+
 2.0.0-hdf (2025/06/29)
 	* Add comprehensive IP address logging
 	* Configurable debug log path w/ smart defaults
@@ -184,7 +195,7 @@
 
 1.3.7 (2003/09/06)
 	* Fixed the infamous hlen bug! I was rewinding to the beginning
-	  of payload, not header. 
+	  of payload, not header.
 
 1.3.5 (2003/09/05)
 	* Returned SIGWINCH to defaults after exiting virus. This was
@@ -223,14 +234,14 @@
 		99% of the time.
 	* Added a sleep(10) after receiving SIGHUP until sending one
 	  to the child process in the mild hopes that this gets around
-		whatever condition is causing it not to receive and handle 
+		whatever condition is causing it not to receive and handle
 		the SIGHUP now.
 
 1.2.16 (2003/08/14)
 	* All code is now run through indent(1) for cleanliness
 	* Game playback in progress now finds the last term reset and plays
 	  forward from the last header before that reset.
-	* Some effort has been made to trap SIGHUP better and pass that 
+	* Some effort has been made to trap SIGHUP better and pass that
 	  along to child processes as well. This still needs work for
 		nethack itself, but dgamelaunch is clean so far.
 

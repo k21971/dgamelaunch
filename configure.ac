@@ -1,7 +1,7 @@
 dnl dgamelaunch configure.ac
 dnl Required minimum autoconf version
 
-AC_INIT([dgamelaunch],[2.0.0-hdf])
+AC_INIT([dgamelaunch],[2.0.1-hdf])
 AC_PREREQ([2.69])
 
 AC_CONFIG_HEADERS([config.h])
@@ -92,8 +92,6 @@ AC_SEARCH_LIBS(initscr, [ncursesw cursesw], [], [
    AC_MSG_ERROR([Cannot find cursesw or ncursesw devel libs.])
 ])
 
-
-
 AC_ARG_ENABLE(debugfile,
 [AS_HELP_STRING([--enable-debugfile],[Enable debugging output to a file.])],
 [], [])
@@ -102,7 +100,6 @@ if test "$enable_debugfile" = yes; then
    AC_MSG_RESULT([Enabling debugging output to a file.])
    AC_DEFINE(USE_DEBUGFILE,1,[Output debugging into to a file in chroot.])
 fi
-
 
 AC_ARG_ENABLE(sqlite,
 [AS_HELP_STRING([--enable-sqlite],[Use SQLite for the database instead of flat text file.])],
@@ -118,9 +115,6 @@ if test "$enable_sqlite" = yes; then
    LIBS="$LIBS -lsqlite3"
    AC_DEFINE_UNQUOTED(USE_SQLITE_DB, "$dgl_sqlite_db", [Path and filename of the SQLite database.])
 fi
-
-
-
 
 dgl_rlimit_core_default=157286400
 AC_ARG_WITH(rlimit-core,
@@ -154,7 +148,6 @@ if test "$enable_rlimit" = yes; then
    enable_rlimit=no
 fi
 
-
 AC_ARG_ENABLE(shmem,
 [AS_HELP_STRING([--enable-shmem],[Use a shared memory block to show number of watchers.])],
 [enable_shmem=yes], [])
@@ -168,7 +161,6 @@ if test "$enable_shmem" = yes; then
    LIBS="$LIBS -lrt"
    # or -pthread?
 fi
-
 
 AC_ARG_WITH(config-file,
 [AS_HELP_STRING([--with-config-file=PATH],[Define the path to the default configuration file.])],
@@ -189,8 +181,6 @@ if test "$ac_cv_func_setproctitle" = no; then
 else
   SETPROCTITLE_C=""
 fi
-
-
 
 AC_SUBST(SETPROCTITLE_C)
 
