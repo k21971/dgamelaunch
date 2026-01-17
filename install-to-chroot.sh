@@ -50,6 +50,22 @@ if [ -n "$DGL_BIN" -a -e "$DGL_BIN" ]; then
   LIBS="$LIBS `findlibs $DGL_BIN`"
 fi
 
+# Copy helper binaries to chroot bin directory
+CHROOT_BIN="$NAO_CHROOT/bin"
+mkdir -p "$CHROOT_BIN"
+
+for binary in ee virus; do
+  BINARY_PATH="$DGL_GIT/$binary"
+  if [ -e "$BINARY_PATH" ]; then
+    echo "Copying $binary to $CHROOT_BIN/"
+    cp "$BINARY_PATH" "$CHROOT_BIN/$binary"
+    chmod 755 "$CHROOT_BIN/$binary"
+    LIBS="$LIBS `findlibs $BINARY_PATH`"
+  else
+    echo "Warning: $binary not found at $BINARY_PATH - skipping."
+  fi
+done
+
 LIBS=`for lib in $LIBS; do echo $lib; done | sort | uniq`
 echo "Copying libraries:" $LIBS
 for lib in $LIBS; do
