@@ -233,6 +233,10 @@ commands[login] = mkdir "$TEST_DIR/userdata/%N",
 
 filemode = "0666"
 
+bannervars = [
+    "\$DATETIME" = timeformat("%F %T")
+]
+
 # NetHack 3.6.7 definition
 DEFINE {
   game_id = "NH36"
@@ -331,7 +335,7 @@ EOF
 
 # Create banner files
 cat > "$TEST_DIR/dgl-banner-anon" << 'EOF'
-=== DGamelaunch Test Server ===
+=== DGamelaunch Test Server ===              $DATETIME
 
 l) Login
 r) Register new account
@@ -343,7 +347,7 @@ EOF
 # Create user banner based on available games
 if [ $ZORK_AVAILABLE -eq 1 ]; then
 cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
-=== DGamelaunch Test Server ===
+=== DGamelaunch Test Server ===              $DATETIME
 Logged in as: $USERNAME
 
 p) Play NetHack 3.6.7
@@ -358,7 +362,7 @@ q) Quit
 EOF
 else
 cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
-=== DGamelaunch Test Server ===
+=== DGamelaunch Test Server ===              $DATETIME
 Logged in as: $USERNAME
 
 p) Play NetHack 3.6.7

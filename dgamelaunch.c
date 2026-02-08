@@ -778,7 +778,9 @@ loadbanner (char *fname, struct dg_banner *ban)
 	  char tmpbufnew[DGL_BANNER_LINELEN+1];
 	  struct dg_banner_var *bv = globalconfig.banner_var_list;
 	  while (bv) {
-	      strncpy(bufnew, bannerstrmangle(bufnew, tmpbufnew, DGL_BANNER_LINELEN, bv->name, banner_var_resolve(bv)), DGL_BANNER_LINELEN);
+	      /* Skip special (time-format) vars; resolved at draw time */
+	      if (!bv->special)
+		  strncpy(bufnew, bannerstrmangle(bufnew, tmpbufnew, DGL_BANNER_LINELEN, bv->name, banner_var_resolve(bv)), DGL_BANNER_LINELEN);
 	      bv = bv->next;
 	  }
 	  strncpy(bufnew, bannerstrmangle(bufnew, tmpbufnew, DGL_BANNER_LINELEN, "$VERSION", PACKAGE_STRING), DGL_BANNER_LINELEN);
@@ -810,10 +812,26 @@ drawbanner (struct dg_banner *ban)
   if (!ban) return;
 
   for (i = 0; i < ban->len; i++) {
-      char *tmpbuf = strdup(ban->lines[i]);
+      char tmpbuf[DGL_BANNER_LINELEN+1];
       char *tmpbuf2 = tmpbuf;
       int ok = 0;
       int x = 1;
+
+      strncpy(tmpbuf, ban->lines[i], DGL_BANNER_LINELEN);
+      tmpbuf[DGL_BANNER_LINELEN] = '\0';
+
+      /* Resolve time-format banner variables at draw time */
+      {
+	  char resolved[DGL_BANNER_LINELEN+1];
+	  struct dg_banner_var *bv = globalconfig.banner_var_list;
+	  while (bv) {
+	      if (bv->special)
+		  strncpy(tmpbuf, bannerstrmangle(tmpbuf, resolved,
+			  DGL_BANNER_LINELEN, bv->name,
+			  banner_var_resolve(bv)), DGL_BANNER_LINELEN);
+	      bv = bv->next;
+	  }
+      }
       do {
 	  ok = 0;
 	  if ((tmpch = strstr(tmpbuf2, "$ATTR("))) {
@@ -867,7 +885,6 @@ drawbanner (struct dg_banner *ban)
 	  } else
 	      mvaddstr (1 + i, x, tmpbuf2);
       } while (ok);
-      free(tmpbuf);
   }
 }
 
@@ -3133,11 +3150,11 @@ runmenuloop(struct dg_menu *menu)
 	if (menu->cursor_x >= 0 && menu->cursor_y >= 0)
 	    move(menu->cursor_y, menu->cursor_x);
 	refresh();
+	timeout(1000); /* 1-second timeout for real-time banner updates */
 	userchoice = dgl_getch();
-	if (userchoice == ERR) {
-	    freebanner(&ban);
-	    return 1;
-	}
+	timeout(-1);   /* restore blocking mode */
+	if (userchoice == ERR)
+	    continue;  /* timeout — redraw banner with updated time */
 	tmpopt = menu->options;
 	while (tmpopt) {
 	    if (strchr(tmpopt->keys, userchoice)) {
