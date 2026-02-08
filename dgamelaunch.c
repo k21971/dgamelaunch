@@ -3337,8 +3337,8 @@ main (int argc, char** argv)
       (void) tcsetattr(0, TCSANOW, &tt);
   }
 
-  if (-1 == ioctl (0, TIOCGWINSZ, (char *) &win) || win.ws_row < 4 ||
-		  win.ws_col < 4) /* Rudimentary validity check */
+  if (-1 == ioctl (0, TIOCGWINSZ, (char *) &win) || win.ws_row < 15 ||
+		  win.ws_col < 40) /* Minimum for NetHack curses mode */
     {
       win.ws_row = 24;
       win.ws_col = 80;
