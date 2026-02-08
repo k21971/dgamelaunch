@@ -1396,7 +1396,11 @@ inprogressmenu (int gameid)
 
       refresh ();
 
-      switch ((menuchoice = dgl_getch ()))
+      timeout(1000); /* 1-second timeout for real-time updates */
+      menuchoice = dgl_getch();
+      timeout(-1);   /* restore blocking mode */
+
+      switch (menuchoice)
         {
 	case KEY_DOWN:
 	    selected++;
@@ -1469,7 +1473,24 @@ inprogressmenu (int gameid)
             offset -= max_height;
           break;
 
-	case ERR:
+	case ERR: /* timeout — refresh game list */
+	    if (selected >= 0 && selected < len)
+		selectedgame = strdup(games[selected]->name);
+	    free_populated_games(games, len);
+	    games = populate_games(gameid, &len, me);
+	    shm_update(shm_dg_data, games, len);
+	    games = sort_games(games, len, sortmode);
+	    if (selectedgame) {
+		selected = -1;
+		for (i = 0; i < len; i++)
+		    if (!strcmp(games[i]->name, selectedgame)) {
+			selected = i;
+			break;
+		    }
+		free(selectedgame);
+		selectedgame = NULL;
+	    }
+	    break;
 	case 'q': case 'Q':
         case '\x1b':
 	    goto leavewatchgame;
