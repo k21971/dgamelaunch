@@ -80,6 +80,8 @@ typedef enum
     DGLCMD_CHPASSWD,	/* chpasswd */
     DGLCMD_PLAYGAME,	/* play_game "foo" */
     DGLCMD_PLAY_IF_EXIST,	/* play_if_exist "game" "file" */
+    DGLCMD_PLAY_LAST,	/* play_last */
+    DGLCMD_RESUME_LAST,	/* resume_last */
     DGLCMD_SUBMENU,	/* submenu "foo" */
     DGLCMD_REDRAW,	/* redraw */
     DGLCMD_RETURN,	/* return */
@@ -218,6 +220,7 @@ struct dg_config
     struct dg_cmdpart *watchcmdqueue;
     int max_idle_time;
     char *extra_info_file;
+    char *savefile; /* save file path pattern for play_last save detection */
     int encoding; // -1 = run --print-charset
 };
 
@@ -261,6 +264,7 @@ struct dg_globalconfig
 
     char *debuglogfile; /* path to debug log file (when USE_DEBUGFILE) */
     char *ip_database; /* path to separate IP logging database (when USE_SQLITE3) */
+    char *lastgame_path; /* per-user file storing last played game ID */
 };
 
 /* Global variables */
@@ -299,8 +303,10 @@ extern void catch_sighup(int signum);
 extern void loadbanner(char *fname, struct dg_banner *ban);
 extern void drawbanner(struct dg_banner *ban);
 extern void banner_var_add(char *name, char *value, int special);
+extern void banner_var_set(const char *name, const char *value);
 extern char *banner_var_value(const char *name);
 extern void banner_var_free(void);
+extern void update_lastgame_banner(struct dg_user *user);
 extern int check_retard(int reset);
 extern char *dgl_format_str(int game, struct dg_user *me, char *str, char *plrname);
 
@@ -315,6 +321,9 @@ extern const char *get_client_ip(void);
 
 extern void free_populated_games(struct dg_game **games, int len);
 extern struct dg_game **populate_games(int game, int *l, struct dg_user *me);
+extern char *read_last_game(struct dg_user *me);
+extern int has_saved_game(int game_index, struct dg_user *me);
+extern int find_newest_save(struct dg_user *me);
 
 #ifdef USE_DEBUGFILE
 extern void debug_write(const char *str);

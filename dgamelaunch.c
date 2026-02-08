@@ -659,6 +659,27 @@ banner_var_add(char *name, char *value, int special)
 }
 
 void
+banner_var_set(const char *name, const char *value)
+{
+    struct dg_banner_var *tmp = globalconfig.banner_var_list;
+    const char *val = value ? value : "";
+
+    while (tmp) {
+	if (!strcmp(tmp->name, name)) {
+	    char *new_value = strdup(val);
+	    if (new_value) {
+		free(tmp->value);
+		tmp->value = new_value;
+	    }
+	    return;
+	}
+	tmp = tmp->next;
+    }
+    /* not found — create new */
+    banner_var_add((char *)name, (char *)val, 0);
+}
+
+void
 banner_var_free()
 {
     struct dg_banner_var *tmp;
@@ -671,6 +692,35 @@ banner_var_free()
 	bv = tmp;
     }
     globalconfig.banner_var_list = NULL;
+}
+
+void
+update_lastgame_banner(struct dg_user *user)
+{
+    int i;
+    char *game_id;
+    const char *game_name = "none";
+    const char *save_name = "none";
+
+    /* $LASTGAME — always shows last game played */
+    game_id = read_last_game(user);
+    if (game_id) {
+	for (i = 0; i < num_games; i++) {
+	    if (!strcmp(myconfig[i]->game_id, game_id)) {
+		game_name = myconfig[i]->game_name;
+		break;
+	    }
+	}
+	free(game_id);
+    }
+
+    /* $LASTSAVE — game with the newest save file */
+    i = find_newest_save(user);
+    if (i >= 0)
+	save_name = myconfig[i]->game_name;
+
+    banner_var_set("LASTGAME", game_name);
+    banner_var_set("LASTSAVE", save_name);
 }
 
 static char *
@@ -2237,6 +2287,7 @@ loginprompt (int from_ttyplay)
       log_user_login(me->username, get_client_ip());
 #endif
       dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_LOGIN], 0, me);
+      update_lastgame_banner(me);
     }
   else
   {

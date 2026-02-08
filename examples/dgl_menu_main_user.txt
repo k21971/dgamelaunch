@@ -13,6 +13,8 @@
  w) Watch games in progress
  o) Edit options
  p) Play NetHack 3.4.3
+ r) Play last game ($LASTGAME)
+ R) Resume saved game ($LASTSAVE)
  q) Quit
 
  =>

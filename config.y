@@ -68,10 +68,10 @@ static int sortmode_number(const char *sortmode_name) {
 %token TYPE_PATH_GAME TYPE_NAME_GAME TYPE_PATH_DGLDIR TYPE_PATH_SPOOL
 %token TYPE_PATH_BANNER TYPE_PATH_CANNED TYPE_PATH_CHROOT
 %token TYPE_PATH_PASSWD TYPE_PATH_LOCKFILE TYPE_PATH_TTYREC TYPE_PATH_DEBUGLOG
-%token TYPE_PATH_IPDATABASE TYPE_MALSTRING TYPE_PATH_INPROGRESS TYPE_GAME_ARGS TYPE_RC_FMT
+%token TYPE_PATH_IPDATABASE TYPE_PATH_LASTGAME TYPE_MALSTRING TYPE_PATH_INPROGRESS TYPE_GAME_ARGS TYPE_RC_FMT
 %token TYPE_CMDQUEUE TYPE_DEFINE_MENU TYPE_BANNER_FILE TYPE_CURSOR
 %token TYPE_POSTCMDQUEUE TYPE_TIMEFORMAT
-%token TYPE_MAX_IDLE_TIME TYPE_MENU_MAX_IDLE_TIME TYPE_EXTRA_INFO_FILE
+%token TYPE_MAX_IDLE_TIME TYPE_MENU_MAX_IDLE_TIME TYPE_EXTRA_INFO_FILE TYPE_PATH_SAVEFILE
 %token TYPE_ENCODING TYPE_LOCALE TYPE_UTF8ESC TYPE_FILEMODE TYPE_DEFTERM
 %token TYPE_FLOWCTRL
 %token <s> TYPE_VALUE
@@ -219,6 +219,11 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
     case TYPE_PATH_IPDATABASE:
       if (globalconfig.ip_database) free (globalconfig.ip_database);
       globalconfig.ip_database = strdup($3);
+      break;
+
+    case TYPE_PATH_LASTGAME:
+      if (globalconfig.lastgame_path) free (globalconfig.lastgame_path);
+      globalconfig.lastgame_path = strdup($3);
       break;
 
     case TYPE_PATH_PASSWD:
@@ -551,6 +556,11 @@ game_definition : TYPE_CMDQUEUE
 		myconfig[ncnf]->inprogressdir = strdup($3);
 		break;
 
+	    case TYPE_PATH_SAVEFILE:
+		if (myconfig[ncnf]->savefile) free(myconfig[ncnf]->savefile);
+		myconfig[ncnf]->savefile = strdup($3);
+		break;
+
             case TYPE_ENCODING:
                 if (!strcasecmp($3, "ask"))
                     myconfig[ncnf]->encoding = -1;
@@ -748,7 +758,9 @@ KeyType : TYPE_SUSER	{ $$ = TYPE_SUSER; }
 	| TYPE_PATH_LOCKFILE	{ $$ = TYPE_PATH_LOCKFILE; }
 	| TYPE_PATH_DEBUGLOG	{ $$ = TYPE_PATH_DEBUGLOG; }
 	| TYPE_PATH_IPDATABASE	{ $$ = TYPE_PATH_IPDATABASE; }
+	| TYPE_PATH_LASTGAME	{ $$ = TYPE_PATH_LASTGAME; }
 	| TYPE_PATH_INPROGRESS	{ $$ = TYPE_PATH_INPROGRESS; }
+	| TYPE_PATH_SAVEFILE	{ $$ = TYPE_PATH_SAVEFILE; }
 	| TYPE_ENCODING         { $$ = TYPE_ENCODING; }
 	| TYPE_LOCALE		{ $$ = TYPE_LOCALE; }
 	| TYPE_DEFTERM		{ $$ = TYPE_DEFTERM; }

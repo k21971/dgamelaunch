@@ -91,10 +91,12 @@ cursor		{ return TYPE_CURSOR; }
 "lockfile"	{ return TYPE_PATH_LOCKFILE; }
 "debuglogfile"	{ return TYPE_PATH_DEBUGLOG; }
 "ip_database"	{ return TYPE_PATH_IPDATABASE; }
+"lastgame_path"	{ return TYPE_PATH_LASTGAME; }
 "inprogressdir" { return TYPE_PATH_INPROGRESS; }
 "game_args"	{ return TYPE_GAME_ARGS; }
 "watch_args"	{ return TYPE_WATCH_ARGS; }
 extra_info_file { return TYPE_EXTRA_INFO_FILE; }
+"savefile"	{ return TYPE_PATH_SAVEFILE; }
 "max_idle_time"	{ return TYPE_MAX_IDLE_TIME; }
 "rc_fmt"	{ return TYPE_RC_FMT; }
 "ttyrecdir"	{ return TYPE_PATH_TTYREC; }
@@ -138,6 +140,8 @@ ask_register	{ yylval.i = DGLCMD_REGISTER;   return TYPE_DGLCMD0; }
 quit		{ yylval.i = DGLCMD_QUIT;       return TYPE_DGLCMD0; }
 play_game	{ yylval.i = DGLCMD_PLAYGAME;    return TYPE_DGLCMD1; }
 play_if_exist	{ yylval.i = DGLCMD_PLAY_IF_EXIST;    return TYPE_DGLCMD2; }
+play_last	{ yylval.i = DGLCMD_PLAY_LAST;   return TYPE_DGLCMD0; }
+resume_last	{ yylval.i = DGLCMD_RESUME_LAST; return TYPE_DGLCMD0; }
 submenu		{ yylval.i = DGLCMD_SUBMENU;     return TYPE_DGLCMD1; }
 return		{ yylval.i = DGLCMD_RETURN;      return TYPE_DGLCMD0; }
 redraw		{ yylval.i = DGLCMD_REDRAW;     return TYPE_DGLCMD0; }

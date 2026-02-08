@@ -12,7 +12,7 @@ fi
 
 # Configuration
 TEST_DIR="${DGAMELAUNCH_TEST_DIR:-/tmp/dgl-test}"
-NETHACK_PATH="${NETHACK_PATH:-/usr/games/lib/official_36_nethackdir}"
+NETHACK_PATH="${NETHACK_PATH:-/usr/games/lib/official36_nethackdir}"
 ZORK_PATH="/usr/games/lib/zork1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -204,6 +204,9 @@ debuglogfile = "$TEST_DIR/dgldebug.log"
 
 # Separate IP database for multi-server deployments
 ip_database = "$TEST_DIR/dgamelaunch_ip.db"
+
+# Per-user file to store last played game ID for play_last command
+lastgame_path = "$TEST_DIR/userdata/%N/%n/lastgame"
 EOF
 
 # Add database-specific config
@@ -248,6 +251,7 @@ DEFINE {
   ttyrecdir = "$TEST_DIR/userdata/%N/%n/ttyrec/"
   spooldir = "$TEST_DIR/var/mail/"
   rc_fmt = "$TEST_DIR/userdata/%N/%n/nethackrc"
+  savefile = "$NETHACK_PATH/var/save/%u%n.gz"
   encoding = "unicode"
 
   # Commands before game starts
@@ -279,6 +283,7 @@ DEFINE {
   game_args = "$TEST_DIR/bin/zork1-wrapper"
   inprogressdir = "$TEST_DIR/inprogress-zork1/"
   ttyrecdir = "$TEST_DIR/userdata/%N/%n/zork1/ttyrec/"
+  savefile = "$TEST_DIR/userdata/%N/%n/zork1/*"
   max_idle_time = 3600
   encoding = "ascii"
 
@@ -319,6 +324,8 @@ fi
 
 # Continue with rest of menu
 cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
+  commands["P"] = play_last
+  commands["R"] = resume_last
   commands["w"] = watch_menu
   commands["c"] = chpasswd
   commands["m"] = chmail
@@ -352,6 +359,8 @@ Logged in as: $USERNAME
 
 p) Play NetHack 3.6.7
 z) Play Zork I
+P) Play last game ($LASTGAME)
+R) Resume saved game ($LASTSAVE)
 w) Watch games
 c) Change password
 m) Change email
@@ -366,6 +375,8 @@ cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
 Logged in as: $USERNAME
 
 p) Play NetHack 3.6.7
+P) Play last game ($LASTGAME)
+R) Resume saved game ($LASTSAVE)
 w) Watch games
 c) Change password
 m) Change email

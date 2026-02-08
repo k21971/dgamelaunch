@@ -3,6 +3,7 @@
 #include "dgamelaunch.h"
 #include "ttyrec.h"
 #include <sys/stat.h>
+#include <glob.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dirent.h>
@@ -43,6 +44,7 @@ struct dg_config defconfig = {
   /* watchcmdqueue = */ NULL,
   /* max_idle_time = */ 0,
   /* extra_info_file = */ NULL,
+  /* savefile = */ NULL,
   /* encoding */ 0
 };
 
@@ -290,6 +292,207 @@ dgl_format_str(int game, struct dg_user *me, char *str, char *plrname)
 }
 
 int
+has_saved_game(int game_index, struct dg_user *me)
+{
+    char *savepath;
+    int exists = 0;
+
+    if (!myconfig[game_index]->savefile) return 0;
+
+    savepath = dgl_format_str(game_index, me, myconfig[game_index]->savefile, NULL);
+    if (!savepath) return 0;
+
+    if (strchr(savepath, '*') || strchr(savepath, '?')) {
+	/* Glob pattern — check for matching regular files */
+	glob_t gl;
+	if (glob(savepath, GLOB_NOSORT, NULL, &gl) == 0) {
+	    size_t i;
+	    struct stat st;
+	    for (i = 0; i < gl.gl_pathc; i++) {
+		if (stat(gl.gl_pathv[i], &st) == 0 && S_ISREG(st.st_mode)) {
+		    exists = 1;
+		    break;
+		}
+	    }
+	    globfree(&gl);
+	}
+    } else {
+	/* Exact path */
+	exists = (access(savepath, F_OK) == 0);
+    }
+
+    free(savepath);
+    return exists;
+}
+
+static void
+save_last_game(int game_index, struct dg_user *me)
+{
+    char *path;
+    FILE *fp;
+
+    if (!globalconfig.lastgame_path || !me) return;
+
+    path = dgl_format_str(game_index, me, globalconfig.lastgame_path, NULL);
+    if (!path) return;
+
+    fp = fopen(path, "w");
+    if (fp) {
+	fprintf(fp, "%s\n", myconfig[game_index]->game_id);
+	fclose(fp);
+    } else {
+	debug_write("save_last_game: cannot write lastgame file");
+    }
+    free(path);
+}
+
+int
+find_newest_save(struct dg_user *me)
+{
+    int best = -1;
+    time_t best_mtime = 0;
+    int i;
+
+    for (i = 0; i < num_games; i++) {
+	char *savepath;
+	struct stat st;
+
+	if (!myconfig[i]->savefile) continue;
+
+	savepath = dgl_format_str(i, me, myconfig[i]->savefile, NULL);
+	if (!savepath) continue;
+
+	if (strchr(savepath, '*') || strchr(savepath, '?')) {
+	    glob_t gl;
+	    if (glob(savepath, GLOB_NOSORT, NULL, &gl) == 0) {
+		size_t j;
+		for (j = 0; j < gl.gl_pathc; j++) {
+		    if (stat(gl.gl_pathv[j], &st) == 0 &&
+			S_ISREG(st.st_mode) &&
+			st.st_mtime > best_mtime) {
+			best_mtime = st.st_mtime;
+			best = i;
+		    }
+		}
+		globfree(&gl);
+	    }
+	} else {
+	    if (stat(savepath, &st) == 0 && S_ISREG(st.st_mode) &&
+		st.st_mtime > best_mtime) {
+		best_mtime = st.st_mtime;
+		best = i;
+	    }
+	}
+	free(savepath);
+    }
+    return best;
+}
+
+char *
+read_last_game(struct dg_user *me)
+{
+    char *path;
+    char buf[64];
+    char *nl;
+    FILE *fp;
+
+    if (!globalconfig.lastgame_path || !me) return NULL;
+
+    path = dgl_format_str(0, me, globalconfig.lastgame_path, NULL);
+    if (!path) return NULL;
+
+    fp = fopen(path, "r");
+    free(path);
+    if (!fp) return NULL;
+
+    if (fgets(buf, sizeof(buf), fp)) {
+	fclose(fp);
+	nl = strchr(buf, '\n');
+	if (nl) *nl = '\0';
+	if (buf[0] != '\0')
+	    return strdup(buf);
+	return NULL;
+    }
+    fclose(fp);
+    return NULL;
+}
+
+static int
+play_game_by_id(const char *game_id, struct dg_user *me)
+{
+    int userchoice, i;
+    char *tmpstr;
+
+    for (userchoice = 0; userchoice < num_games; userchoice++) {
+	if (!strcmp(myconfig[userchoice]->game_id, game_id) ||
+	    !strcmp(myconfig[userchoice]->game_name, game_id) ||
+	    !strcmp(myconfig[userchoice]->shortname, game_id)) {
+	    if (purge_stale_locks(userchoice)) {
+		char *ttrecdir = NULL;
+		if (myconfig[userchoice]->rcfile) {
+		    char *rcname = NULL;
+		    if (access(rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
+			write_canned_rcfile(userchoice, rcname);
+		    if (rcname) free(rcname);
+		}
+
+		setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
+
+		clear();
+		refresh();
+		endwin();
+
+		/* first run the generic "do these when a game is started" commands */
+		dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMESTART], userchoice, me);
+		/* then run the game-specific commands */
+		dgl_exec_cmdqueue(myconfig[userchoice]->cmdqueue, userchoice, me);
+
+		/* fix the variables in the arguments */
+		for (i = 0; i < myconfig[userchoice]->num_args; i++) {
+		    tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
+		    free(myconfig[userchoice]->bin_args[i]);
+		    myconfig[userchoice]->bin_args[i] = tmpstr;
+		}
+
+		signal(SIGWINCH, SIG_DFL);
+		signal(SIGINT, SIG_DFL);
+		signal(SIGQUIT, SIG_DFL);
+		signal(SIGTERM, SIG_DFL);
+		idle_alarm_set_enabled(0);
+
+		/* launch program */
+		ttyrec_main(userchoice, me->username,
+			    ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
+			    gen_ttyrec_filename());
+		idle_alarm_set_enabled(1);
+		if (ttrecdir) free(ttrecdir);
+		/* lastly, run the generic "do these when a game is left" commands */
+		signal(SIGHUP, catch_sighup);
+		signal(SIGINT, catch_sighup);
+		signal(SIGQUIT, catch_sighup);
+		signal(SIGTERM, catch_sighup);
+		signal(SIGWINCH, sigwinch_func);
+
+		dgl_exec_cmdqueue(myconfig[userchoice]->postcmdqueue, userchoice, me);
+
+		dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMEEND], userchoice, me);
+
+		/* save last game, update banner */
+		save_last_game(userchoice, me);
+		update_lastgame_banner(me);
+		redraw_banner = 1;
+
+		setproctitle("%s", me->username);
+		initcurses();
+		check_retard(1); /* reset retard counter */
+	    }
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+int
 dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername)
 {
     struct dg_cmdpart *tmp = queue;
@@ -526,66 +729,38 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    /* FALLTHROUGH */
 	case DGLCMD_PLAYGAME:
 	    if (loggedin && me && p1 && !played) {
-		int userchoice, i;
-		char *tmpstr;
-		for (userchoice = 0; userchoice < num_games; userchoice++) {
-		    if (!strcmp(myconfig[userchoice]->game_id, p1) || !strcmp(myconfig[userchoice]->game_name, p1) || !strcmp(myconfig[userchoice]->shortname, p1)) {
-			if (purge_stale_locks(userchoice)) {
-                            char *ttrecdir = NULL;
-			    if (myconfig[userchoice]->rcfile) {
-                                char *rcname = NULL;
-				if (access (rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
-				    write_canned_rcfile (userchoice, rcname);
-                                if (rcname) free(rcname);
-			    }
-
-			    setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
-
-			    clear();
-			    refresh();
-			    endwin ();
-
-			    /* first run the generic "do these when a game is started" commands */
-			    dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMESTART], userchoice, me);
-			    /* then run the game-specific commands */
-			    dgl_exec_cmdqueue(myconfig[userchoice]->cmdqueue, userchoice, me);
-
-			    /* fix the variables in the arguments */
-			    for (i = 0; i < myconfig[userchoice]->num_args; i++) {
-				tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
-				free(myconfig[userchoice]->bin_args[i]);
-				myconfig[userchoice]->bin_args[i] = tmpstr;
-			    }
-
-			    signal(SIGWINCH, SIG_DFL);
-			    signal(SIGINT, SIG_DFL);
-			    signal(SIGQUIT, SIG_DFL);
-			    signal(SIGTERM, SIG_DFL);
-			    idle_alarm_set_enabled(0);
-			    /* launch program */
-			    ttyrec_main (userchoice, me->username,
-					 ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
-					 gen_ttyrec_filename());
-			    idle_alarm_set_enabled(1);
-			    played = 1;
-                            if (ttrecdir) free(ttrecdir);
-			    /* lastly, run the generic "do these when a game is left" commands */
-			    signal (SIGHUP, catch_sighup);
-			    signal (SIGINT, catch_sighup);
-			    signal (SIGQUIT, catch_sighup);
-			    signal (SIGTERM, catch_sighup);
-			    signal(SIGWINCH, sigwinch_func);
-
-			    dgl_exec_cmdqueue(myconfig[userchoice]->postcmdqueue, userchoice, me);
-
-			    dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMEEND], userchoice, me);
-
-			    setproctitle ("%s", me->username);
-			    initcurses ();
-			    check_retard(1); /* reset retard counter */
-			}
-			break;
-		    }
+		if (play_game_by_id(p1, me))
+		    played = 1;
+	    }
+	    break;
+	case DGLCMD_PLAY_LAST:
+	    if (loggedin && me && !played) {
+		char *lastgame_id = read_last_game(me);
+		if (lastgame_id) {
+		    if (play_game_by_id(lastgame_id, me))
+			played = 1;
+		    free(lastgame_id);
+		} else {
+		    clear();
+		    mvaddstr(5, 1, "No last game recorded.");
+		    mvaddstr(7, 1, "[Press any key]");
+		    refresh();
+		    dgl_getch();
+		}
+	    }
+	    break;
+	case DGLCMD_RESUME_LAST:
+	    if (loggedin && me && !played) {
+		int gi = find_newest_save(me);
+		if (gi >= 0) {
+		    if (play_game_by_id(myconfig[gi]->game_id, me))
+			played = 1;
+		} else {
+		    clear();
+		    mvaddstr(5, 1, "No saved game to resume.");
+		    mvaddstr(7, 1, "[Press any key]");
+		    refresh();
+		    dgl_getch();
 		}
 	    }
 	    break;
