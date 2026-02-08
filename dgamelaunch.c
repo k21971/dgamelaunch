@@ -719,8 +719,8 @@ update_lastgame_banner(struct dg_user *user)
     if (i >= 0)
 	save_name = myconfig[i]->game_name;
 
-    banner_var_set("LASTGAME", game_name);
-    banner_var_set("LASTSAVE", save_name);
+    banner_var_set("$LASTGAME", game_name);
+    banner_var_set("$LASTSAVE", save_name);
 }
 
 static char *
