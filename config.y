@@ -224,6 +224,9 @@ KeyPair: TYPE_CMDQUEUE '[' TYPE_CMDQUEUENAME ']'
     case TYPE_PATH_LASTGAME:
       if (globalconfig.lastgame_path) free (globalconfig.lastgame_path);
       globalconfig.lastgame_path = strdup($3);
+      /* Pre-register dynamic banner vars (special=2, resolved at draw time) */
+      banner_var_add((char *)"LASTGAME", (char *)"none", 2);
+      banner_var_add((char *)"LASTSAVE", (char *)"none", 2);
       break;
 
     case TYPE_PATH_PASSWD:

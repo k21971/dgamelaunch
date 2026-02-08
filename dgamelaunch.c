@@ -731,6 +731,7 @@ banner_var_resolve(struct dg_banner_var *bv)
   struct tm *ptm;
   if (!bv) return NULL;
   if (!bv->special) return bv->value;
+  if (bv->special == 2) return bv->value; /* dynamic, no strftime */
   time(&tstamp);
   ptm = gmtime(&tstamp);
 #pragma GCC diagnostic push
