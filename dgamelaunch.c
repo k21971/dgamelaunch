@@ -2205,6 +2205,7 @@ autologin (char* user, char *pass)
 	  log_user_login(me->username, get_client_ip());
 #endif
 	  dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_LOGIN], 0, me);
+	  update_lastgame_banner(me);
       }
   }
 }
