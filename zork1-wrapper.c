@@ -58,9 +58,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Execute frotz */
+    /* Execute frotz - restrict file I/O to user directory */
     execl("/bin/frotz", "frotz", "-q", "-f", "white", "-b", "blue",
           "-l", "1", "-r", "1",
+          "-R", user_base,
           zork_dat, (char *)NULL);
 
     /* If we get here, exec failed */
