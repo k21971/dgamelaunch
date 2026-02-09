@@ -1342,6 +1342,7 @@ inprogressmenu (int gameid)
   int selected_attr = A_BOLD;
 
   int require_enter = 0; /* TODO: make configurable */
+  int paused = 0;        /* pause auto-refresh toggle */
 
   time_t ctime;
 
@@ -1439,15 +1440,25 @@ inprogressmenu (int gameid)
 
       if (len > 0) {
 	  mvprintw ((btm+top_banner_hei), 1, "(%d-%d of %d)", offset + 1, offset + i, len);
+	  if (paused) {
+	      attron(A_BOLD);
+	      printw(" [PAUSED]");
+	      attroff(A_BOLD);
+	  }
 	  mvaddstr ((btm+2+top_banner_hei), 1, "Watch which game? ('?' for help) => ");
       } else {
 	  mvprintw(top_banner_hei,4,"Sorry, no games available for viewing.");
+	  if (paused) {
+	      attron(A_BOLD);
+	      mvaddstr((btm+top_banner_hei), 1, "[PAUSED]");
+	      attroff(A_BOLD);
+	  }
 	  mvaddstr((btm+2+top_banner_hei), 1, "Press 'q' to return, or '?' for help => ");
       }
 
       refresh ();
 
-      timeout(1000); /* 1-second timeout for real-time updates */
+      timeout(paused ? -1 : 1000);
       menuchoice = dgl_getch();
       timeout(-1);   /* restore blocking mode */
 
@@ -1525,6 +1536,8 @@ inprogressmenu (int gameid)
           break;
 
 	case ERR: /* timeout — refresh game list */
+	    if (paused)
+		break;
 	    if (selected >= 0 && selected < len)
 		selectedgame = strdup(games[selected]->name);
 	    free_populated_games(games, len);
@@ -1561,6 +1574,10 @@ inprogressmenu (int gameid)
           }
 	  clear ();
 	  break;
+
+	case '\\': /* pause/unpause auto-refresh */
+	    paused = !paused;
+	    break;
 
 	case 13:
 	case 10:
@@ -1692,20 +1709,22 @@ watchgame:
             }
         }
 
-      if (selected >= 0 && selected < len)
-	  selectedgame = strdup(games[selected]->name);
-      games = populate_games (gameid, &len, me);
-      shm_update(shm_dg_data, games, len);
-      games = sort_games (games, len, sortmode);
-      if (selectedgame) {
-	  selected = -1;
-	  for (i = 0; i < len; i++)
-	      if (!strcmp(games[i]->name, selectedgame)) {
-		  selected = i;
-		  break;
-	      }
-	  free(selectedgame);
-	  selectedgame = NULL;
+      if (!paused) {
+	  if (selected >= 0 && selected < len)
+	      selectedgame = strdup(games[selected]->name);
+	  games = populate_games (gameid, &len, me);
+	  shm_update(shm_dg_data, games, len);
+	  games = sort_games (games, len, sortmode);
+	  if (selectedgame) {
+	      selected = -1;
+	      for (i = 0; i < len; i++)
+		  if (!strcmp(games[i]->name, selectedgame)) {
+		      selected = i;
+		      break;
+		  }
+	      free(selectedgame);
+	      selectedgame = NULL;
+	  }
       }
     }
 leavewatchgame:

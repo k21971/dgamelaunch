@@ -5,11 +5,11 @@
  ?        show this help.
  > <      next/previous page.
  . ,      change sorting method.
+ \        pause/unpause auto-refresh.
  q Q      return to main menu.
  a-zA-Z   select a game to watch.
  *        start showing a randomly selected game.
  enter    start watching already selected game.
-
 
  While watching a game
  ---------------------
@@ -17,6 +17,5 @@
  m        send mail to the player (requires login).
  s        toggle charset stripping between DEC/IBM/none.
  r        resize your terminal to match the player's terminal.
-
 
  Press 'q' or space to return to the watching menu.
