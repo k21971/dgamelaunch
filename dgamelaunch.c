@@ -1382,7 +1382,7 @@ inprogressmenu (int gameid)
       if (len > 0) {
 	  while (offset >= len) { offset -= max_height; }
 	  if (offset < 0) offset = 0;
-	  mvaddstr (3, 1, "Games in progress (select \ to pause/unpause auto-refresh):");
+	  mvaddstr (3, 1, "Games in progress (select \\ to pause/unpause auto-refresh):");
 
 	  for (curr_watchcol = watchcols; *curr_watchcol; ++curr_watchcol) {
               struct dg_watchcols *wcol = *curr_watchcol;
