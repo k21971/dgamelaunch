@@ -1497,7 +1497,7 @@ inprogressmenu (int gameid)
 	      }
 	  }
 
-	  if (i + offset == selected) attroff(selected_attr);
+	  if (i + offset == selected) attron(CLR_NORMAL);
 
         }
 
