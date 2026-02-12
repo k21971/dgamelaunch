@@ -1478,13 +1478,21 @@ inprogressmenu (int gameid)
                                    ctime, shm_dg_game,
                                    tmpbuf, sizeof tmpbuf, &hilite,
                                    (dg_sortmode)col->dat);
-	      if (hilite) attron(hilite);
+	      if (hilite) {
+		  if (i + offset == selected)
+		      attron(hilite | A_BOLD);
+		  else
+		      attron(hilite);
+	      }
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 	      mvprintw(top_banner_hei + 1 + i, col->x, col->fmt, tmpbuf);
 #pragma GCC diagnostic pop
 	      if (hilite) {
-		  attron(CLR_NORMAL);
+		  if (i + offset == selected)
+		      attron(selected_attr);
+		  else
+		      attron(CLR_NORMAL);
 		  hilite = 0;
 	      }
 	  }
