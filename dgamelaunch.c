@@ -1401,7 +1401,7 @@ inprogressmenu (int gameid)
   int btm;
 
   int title_attr = A_STANDOUT;
-  int selected_attr = A_BOLD;
+  int selected_attr = color_remap[30]; /* dark teal, cyan on 16-color */
 
   int require_enter = 0; /* TODO: make configurable */
   int paused = 0;        /* pause auto-refresh toggle */
@@ -1503,17 +1503,17 @@ inprogressmenu (int gameid)
       if (len > 0) {
 	  mvprintw ((btm+top_banner_hei), 1, "(%d-%d of %d)", offset + 1, offset + i, len);
 	  if (paused) {
-	      attron(A_BOLD);
+	      attron(color_remap[12]);
 	      printw(" [PAUSED]");
-	      attroff(A_BOLD);
+	      attroff(color_remap[12]);
 	  }
 	  mvaddstr ((btm+2+top_banner_hei), 1, "Watch which game? ('?' for help) => ");
       } else {
 	  mvprintw(top_banner_hei,4,"Sorry, no games available for viewing.");
 	  if (paused) {
-	      attron(A_BOLD);
+	      attron(color_remap[12]);
 	      mvaddstr((btm+top_banner_hei), 1, "[PAUSED]");
-	      attroff(A_BOLD);
+	      attroff(color_remap[12]);
 	  }
 	  mvaddstr((btm+2+top_banner_hei), 1, "Press 'q' to return, or '?' for help => ");
       }
