@@ -36,7 +36,7 @@
 # define CLR_RED     0
 # define CLR_GREEN   0
 #endif
-extern int color_remap[];
+extern int color_remap[256];
 
 typedef enum
 {

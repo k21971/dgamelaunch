@@ -130,24 +130,86 @@ static struct dg_watchcols default_watchcols[] = {
 #endif
 };
 
-int color_remap[16] = {
-    COLOR_PAIR(9) | A_NORMAL,
-    COLOR_PAIR(COLOR_BLUE) | A_NORMAL,
-    COLOR_PAIR(COLOR_GREEN) | A_NORMAL,
-    COLOR_PAIR(COLOR_CYAN) | A_NORMAL,
-    COLOR_PAIR(COLOR_RED) | A_NORMAL,
-    COLOR_PAIR(COLOR_MAGENTA) | A_NORMAL,
-    COLOR_PAIR(COLOR_YELLOW) | A_NORMAL,
-    COLOR_PAIR(COLOR_BLACK) | A_NORMAL,
-    COLOR_PAIR(10) | A_BOLD,
-    COLOR_PAIR(COLOR_BLUE) | A_BOLD,
-    COLOR_PAIR(COLOR_GREEN) | A_BOLD,
-    COLOR_PAIR(COLOR_CYAN) | A_BOLD,
-    COLOR_PAIR(COLOR_RED) | A_BOLD,
-    COLOR_PAIR(COLOR_MAGENTA) | A_BOLD,
-    COLOR_PAIR(COLOR_YELLOW) | A_BOLD,
-    COLOR_PAIR(COLOR_WHITE) | A_BOLD,
-};
+int color_remap[256];
+
+/* Map xterm 256-color index (16-255) to nearest dgamelaunch $ATTR number (0-15) */
+static int
+color256_to_dgl16(int idx)
+{
+    /* dgamelaunch $ATTR numbers for each ANSI hue (R|G<<1|B<<2) */
+    static const int hue_to_dgl[] = {
+	0,  /* 0: black   → dark gray  */
+	4,  /* 1: red     → red        */
+	2,  /* 2: green   → green      */
+	6,  /* 3: yellow  → yellow     */
+	1,  /* 4: blue    → blue       */
+	5,  /* 5: magenta → magenta    */
+	3,  /* 6: cyan    → cyan       */
+	15  /* 7: white   → bright white */
+    };
+    int ci, r, g, b, hue, dgl, mx;
+
+    if (idx >= 232) {
+	/* Grayscale ramp: 24 shades from dark to light */
+	int level = idx - 232;
+	if (level < 8)  return 0;   /* dark gray */
+	if (level < 16) return 8;   /* dark gray bold */
+	return 15;                   /* bright white */
+    }
+
+    /* Color cube: index = 16 + 36*r + 6*g + b */
+    ci = idx - 16;
+    r = ci / 36;
+    g = (ci % 36) / 6;
+    b = ci % 6;
+
+    /* Quantize each channel to on/off (threshold 2) */
+    hue = (r >= 2 ? 1 : 0) | (g >= 2 ? 2 : 0) | (b >= 2 ? 4 : 0);
+    dgl = hue_to_dgl[hue];
+
+    /* Use bright variant if any component is high */
+    mx = r;
+    if (g > mx) mx = g;
+    if (b > mx) mx = b;
+    if (mx >= 4 && dgl < 15)
+	dgl += 8;
+
+    return dgl;
+}
+
+static void
+init_color_remap(void)
+{
+    /* 0-7: standard colors (normal weight) */
+    color_remap[0] = COLOR_PAIR(9) | A_NORMAL;
+    color_remap[1] = COLOR_PAIR(COLOR_BLUE) | A_NORMAL;
+    color_remap[2] = COLOR_PAIR(COLOR_GREEN) | A_NORMAL;
+    color_remap[3] = COLOR_PAIR(COLOR_CYAN) | A_NORMAL;
+    color_remap[4] = COLOR_PAIR(COLOR_RED) | A_NORMAL;
+    color_remap[5] = COLOR_PAIR(COLOR_MAGENTA) | A_NORMAL;
+    color_remap[6] = COLOR_PAIR(COLOR_YELLOW) | A_NORMAL;
+    color_remap[7] = COLOR_PAIR(COLOR_BLACK) | A_NORMAL; /* terminal default */
+    /* 8-15: bright colors (bold) */
+    color_remap[8]  = COLOR_PAIR(10) | A_BOLD;
+    color_remap[9]  = COLOR_PAIR(COLOR_BLUE) | A_BOLD;
+    color_remap[10] = COLOR_PAIR(COLOR_GREEN) | A_BOLD;
+    color_remap[11] = COLOR_PAIR(COLOR_CYAN) | A_BOLD;
+    color_remap[12] = COLOR_PAIR(COLOR_RED) | A_BOLD;
+    color_remap[13] = COLOR_PAIR(COLOR_MAGENTA) | A_BOLD;
+    color_remap[14] = COLOR_PAIR(COLOR_YELLOW) | A_BOLD;
+    color_remap[15] = COLOR_PAIR(COLOR_WHITE) | A_BOLD;
+    /* 16-255: extended 256-color palette */
+    if (COLORS >= 256) {
+	int i;
+	for (i = 16; i < 256 && i < COLOR_PAIRS; i++)
+	    color_remap[i] = COLOR_PAIR(i) | A_NORMAL;
+    } else {
+	/* Fallback: map extended colors to nearest basic 0-15 */
+	int i;
+	for (i = 16; i < 256; i++)
+	    color_remap[i] = color_remap[color256_to_dgl16(i)];
+    }
+}
 
 static struct dg_watchcols *default_watchcols_list[DGL_MAXWATCHCOLS + 1];
 
@@ -911,7 +973,7 @@ drawbanner (struct dg_banner *ban)
 			  case '5': case '6': case '7': case '8': case '9':
 			      {
 				  int num = atoi(tmpch);
-				  if (num >= 0 && num <= 15)
+				  if (num >= 0 && num <= 255)
 				      attr |= color_remap[num];
 			      }
 			      break;
@@ -2199,11 +2261,21 @@ initcurses ()
   init_pair(10, COLOR_BLACK, -1);
   init_pair(11, -1, -1);
 
+  /* Extended 256-color palette: pairs 12-255 */
+  if (COLORS >= 256) {
+      int i;
+      for (i = 12; i < 256 && i < COLOR_PAIRS; i++)
+	  init_pair(i, i, -1);
+  }
+
+  init_color_remap();
+#endif /* USE_NCURSES_COLOR — moved here to include init_color_remap */
+
   if (globalconfig.utf8esc) {
       ssize_t n = write(1, "\033%G", 3);
       (void)n; /* Terminal control sequence - ignore errors */
   }
-#endif
+
   clear();
   refresh();
 }
