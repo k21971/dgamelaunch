@@ -920,7 +920,7 @@ drawbanner (struct dg_banner *ban)
 {
   unsigned int i;
   char *tmpch, *tmpch2, *splch;
-  int attr = 0, oattr = 0;
+  int attr = 0;
 
   if (!ban) return;
 
@@ -952,7 +952,6 @@ drawbanner (struct dg_banner *ban)
 		  int spl = 0;
 		  char *nxttmpch;
 		  ok = 1;
-		  oattr = attr;
 		  attr = A_NORMAL;
 		  *tmpch = *tmpch2 = '\0';
 		  tmpch += 6;
@@ -988,8 +987,7 @@ drawbanner (struct dg_banner *ban)
 		  } while (spl);
 
 		  mvaddstr(1 + i, x, tmpbuf2);
-		  if (oattr) attroff(oattr);
-		  if (attr) attron(attr);
+		  attrset(attr);
 		  x += strlen(tmpbuf2);
 		  tmpch2++;
 		  tmpbuf2 = tmpch2;
@@ -1401,7 +1399,7 @@ inprogressmenu (int gameid)
   int btm;
 
   int title_attr = A_STANDOUT;
-  int selected_attr = color_remap[30]; /* dark teal, cyan on 16-color */
+  int selected_attr = color_remap[30]; /* dark teal (cyan on 16-color) */
 
   int require_enter = 0; /* TODO: make configurable */
   int paused = 0;        /* pause auto-refresh toggle */
@@ -1467,7 +1465,9 @@ inprogressmenu (int gameid)
           if (i + offset >= len)
             break;
 
-	  if (i + offset == selected) attron(selected_attr);
+	  int is_selected = (i + offset == selected);
+
+	  if (is_selected) attrset(selected_attr);
 
 	  for (curr_watchcol = watchcols; *curr_watchcol; ++curr_watchcol) {
               struct dg_watchcols *col = *curr_watchcol;
@@ -1479,25 +1479,25 @@ inprogressmenu (int gameid)
                                    tmpbuf, sizeof tmpbuf, &hilite,
                                    (dg_sortmode)col->dat);
 	      if (hilite) {
-		  if (i + offset == selected)
-		      attron(hilite | A_BOLD);
+		  if (is_selected)
+		      attrset(hilite | A_BOLD);
 		  else
-		      attron(hilite);
+		      attrset(hilite);
 	      }
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 	      mvprintw(top_banner_hei + 1 + i, col->x, col->fmt, tmpbuf);
 #pragma GCC diagnostic pop
 	      if (hilite) {
-		  if (i + offset == selected)
-		      attron(selected_attr);
+		  if (is_selected)
+		      attrset(selected_attr);
 		  else
-		      attron(CLR_NORMAL);
+		      attrset(CLR_NORMAL);
 		  hilite = 0;
 	      }
 	  }
 
-	  if (i + offset == selected) attron(CLR_NORMAL);
+	  if (is_selected) attrset(CLR_NORMAL);
 
         }
 
@@ -1511,17 +1511,17 @@ inprogressmenu (int gameid)
       if (len > 0) {
 	  mvprintw ((btm+top_banner_hei), 1, "(%d-%d of %d)", offset + 1, offset + i, len);
 	  if (paused) {
-	      attron(color_remap[12]);
+	      attrset(color_remap[12]);
 	      printw(" [PAUSED]");
-	      attroff(color_remap[12]);
+	      attrset(CLR_NORMAL);
 	  }
 	  mvaddstr ((btm+2+top_banner_hei), 1, "Watch which game? ('?' for help) => ");
       } else {
 	  mvprintw(top_banner_hei,4,"Sorry, no games available for viewing.");
 	  if (paused) {
-	      attron(color_remap[12]);
+	      attrset(color_remap[12]);
 	      mvaddstr((btm+top_banner_hei), 1, "[PAUSED]");
-	      attroff(color_remap[12]);
+	      attrset(CLR_NORMAL);
 	  }
 	  mvaddstr((btm+2+top_banner_hei), 1, "Press 'q' to return, or '?' for help => ");
       }
