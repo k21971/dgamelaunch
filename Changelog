@@ -1,3 +1,19 @@
+2.1.0-hdf (2026/02/13)
+	* Security: restrict frotz file I/O to user's Zork directory via -R flag
+	* Add real-time $DATETIME updates to menu banners
+	* Add real-time auto-refresh to watch menu (1-second interval)
+	* Add pause/unpause toggle (\) to watch menu auto-refresh
+	* Add play_last and resume_last commands for quick game re-launch
+	* Add $LASTGAME and $LASTSAVE banner variables
+	* Add 256-color palette support to $ATTR() banner colors (16-255)
+	* Banner colors now use terminal default background instead of black
+	* Raise minimum terminal size to 40x15 to prevent curses crash
+	* Fix $LASTGAME/$LASTSAVE not populating after SSH autologin
+	* Fix $LASTGAME/$LASTSAVE banner vars not resolving (special=2, $ prefix)
+	* Fix missing NULL check in banner_var_set() (dgamelaunch.c)
+	* Fix color pair corruption from attron/attroff in watch menu and banners
+	* Fix backslash rendering as literal in banners
+
 2.0.1-hdf (2026/01/17)
 	* Fix wrong variable in waitpid() after fork (dgl-common.c)
 	* Fix logic error in random game selection (dgamelaunch.c)
