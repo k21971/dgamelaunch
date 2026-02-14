@@ -582,7 +582,8 @@ int
 dgl_getch(void)
 {
     const int c = getch();
-    idle_alarm_reset();
+    if (c != ERR)
+        idle_alarm_reset();
     return c;
 }
 
@@ -1606,6 +1607,11 @@ inprogressmenu (int gameid)
           break;
 
 	case ERR: /* timeout — refresh game list */
+	    {
+		struct termios t;
+		if (tcgetattr(STDIN_FILENO, &t) < 0)
+		    goto leavewatchgame;  /* terminal dead */
+	    }
 	    if (paused)
 		break;
 	    if (selected >= 0 && selected < len)
@@ -3326,8 +3332,14 @@ runmenuloop(struct dg_menu *menu)
 	timeout(1000); /* 1-second timeout for real-time banner updates */
 	userchoice = dgl_getch();
 	timeout(-1);   /* restore blocking mode */
-	if (userchoice == ERR)
+	if (userchoice == ERR) {
+	    struct termios t;
+	    if (tcgetattr(STDIN_FILENO, &t) < 0) {
+		freebanner(&ban);
+		return 1;  /* terminal dead — exit cleanly */
+	    }
 	    continue;  /* timeout — redraw banner with updated time */
+	}
 	tmpopt = menu->options;
 	while (tmpopt) {
 	    if (strchr(tmpopt->keys, userchoice)) {
