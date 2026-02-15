@@ -581,9 +581,35 @@ catch_sighup (int signum)
 int
 dgl_getch(void)
 {
+    static int consecutive_errs = 0;
+    static struct timespec first_err_time;
+
     const int c = getch();
-    if (c != ERR)
+    if (c != ERR) {
         idle_alarm_reset();
+        consecutive_errs = 0;
+        return c;
+    }
+
+    /* ERR returned — check for rapid spin (dead terminal safety net) */
+    consecutive_errs++;
+    if (consecutive_errs == 1)
+        clock_gettime(CLOCK_MONOTONIC, &first_err_time);
+
+    if (consecutive_errs >= 10) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long elapsed_ms = (now.tv_sec - first_err_time.tv_sec) * 1000 +
+                          (now.tv_nsec - first_err_time.tv_nsec) / 1000000;
+        if (elapsed_ms < 1000) {
+            /* 10+ ERRs in under 1 second = spin loop */
+            debug_write("dgl_getch: rapid ERR spin detected, forcing exit");
+            kill(0, SIGHUP);
+        }
+        /* Reset window for next batch */
+        consecutive_errs = 0;
+        clock_gettime(CLOCK_MONOTONIC, &first_err_time);
+    }
     return c;
 }
 
@@ -1607,10 +1633,9 @@ inprogressmenu (int gameid)
           break;
 
 	case ERR: /* timeout — refresh game list */
-	    {
-		struct termios t;
-		if (tcgetattr(STDIN_FILENO, &t) < 0)
-		    goto leavewatchgame;  /* terminal dead */
+	    if (terminal_is_dead()) {
+		debug_write("inprogressmenu: dead terminal detected");
+		goto leavewatchgame;
 	    }
 	    if (paused)
 		break;
@@ -3333,10 +3358,10 @@ runmenuloop(struct dg_menu *menu)
 	userchoice = dgl_getch();
 	timeout(-1);   /* restore blocking mode */
 	if (userchoice == ERR) {
-	    struct termios t;
-	    if (tcgetattr(STDIN_FILENO, &t) < 0) {
+	    if (terminal_is_dead()) {
+		debug_write("runmenuloop: dead terminal detected");
 		freebanner(&ban);
-		return 1;  /* terminal dead — exit cleanly */
+		return 1;
 	    }
 	    continue;  /* timeout — redraw banner with updated time */
 	}

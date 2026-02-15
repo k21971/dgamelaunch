@@ -17,6 +17,8 @@
 #include <grp.h>
 #include <curses.h>
 #include <sys/errno.h>
+#include <poll.h>
+#include <termios.h>
 
 extern FILE* yyin;
 extern int yyparse (void);
@@ -88,6 +90,22 @@ term_resize_check(void)
     dgl_local_LINES = LINES;
     curses_resize = 0;
     signal(SIGWINCH, sigwinch_func);
+}
+
+int
+terminal_is_dead(void)
+{
+    struct termios t;
+    if (tcgetattr(STDIN_FILENO, &t) < 0)
+        return 1;
+
+    struct pollfd pfd;
+    pfd.fd = STDIN_FILENO;
+    pfd.events = 0;
+    if (poll(&pfd, 1, 0) >= 0 && (pfd.revents & (POLLHUP | POLLERR)))
+        return 1;
+
+    return 0;
 }
 
 int

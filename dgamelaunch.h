@@ -345,6 +345,7 @@ extern void shm_mk_keys(key_t *shm_key, key_t *shm_sem_key);
 extern void shm_init(struct dg_shm **shm_dg_data, struct dg_shm_game **shm_dg_game);
 
 extern int dgl_getch(void);
+extern int terminal_is_dead(void);
 extern void idle_alarm_set_enabled(int enabled);
 extern void idle_alarm_reset(void);
 extern void inprogressmenu(int gameid);

@@ -135,9 +135,11 @@ kbhit(void)
     i = wgetch(stdscr);
     nodelay(stdscr, FALSE);
 
-    if (i == -1)
+    if (i == -1) {
+        if (terminal_is_dead())
+            return ERR;  /* propagate to ttyread → READ_QUIT */
         i = 0;
-    else
+    } else
         ungetch(i);
     return (i);
 }
