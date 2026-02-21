@@ -52,7 +52,7 @@ const char *vi_Version = "0.0.6+dgamelaunch " PACKAGE_VERSION;
 #define BB_FEATURE_VI_COLON     // 4288
 #define BB_FEATURE_VI_YANKMARK  // 1408
 #define BB_FEATURE_VI_SEARCH    // 1088
-// #define BB_FEATURE_VI_USE_SIGNALS    // 1056
+#define BB_FEATURE_VI_USE_SIGNALS    // 1056
 #define BB_FEATURE_VI_DOT_CMD   //  576
 #define BB_FEATURE_VI_READONLY  //  128
 //#define BB_FEATURE_VI_SETOPTS   //  576
@@ -377,7 +377,7 @@ static void edit_file (Byte * fn)
   int cnt, size, ch;
 
 #ifdef BB_FEATURE_VI_USE_SIGNALS
-  char *msg;
+  const char *msg;
   int sig;
 #endif /* BB_FEATURE_VI_USE_SIGNALS */
 #ifdef BB_FEATURE_VI_YANKMARK
@@ -436,7 +436,7 @@ static void edit_file (Byte * fn)
   signal (SIGSYS, core_sig);
 #endif
   signal (SIGWINCH, winch_sig);
-  signal (SIGTSTP, suspend_sig);
+  signal (SIGTSTP, SIG_IGN);         // no job control in dgamelaunch
   sig = setjmp (restart);
   if (sig != 0) {
       msg = "";
@@ -869,8 +869,7 @@ key_cmd_mode:
     case 0x03:                 // ctrl-C   interrupt
       longjmp (restart, 1);
       break;
-    case 26:                   // ctrl-Z suspend
-      suspend_sig (SIGTSTP);
+    case 26:                   // ctrl-Z suspend (ignored in dgamelaunch)
       break;
 #endif /* BB_FEATURE_VI_USE_SIGNALS */
     case 4:                    // ctrl-D  scroll down half screen
@@ -3209,6 +3208,7 @@ static void window_size_get(int sig)
 #ifdef BB_FEATURE_VI_USE_SIGNALS
 static void winch_sig(int sig)
 {
+  (void) sig;
   signal (SIGWINCH, winch_sig);
 #ifdef BB_FEATURE_VI_WIN_RESIZE
   window_size_get (0);
@@ -3220,6 +3220,7 @@ static void winch_sig(int sig)
 //----- Come here when we get a continue signal -------------------
 static void cont_sig(int sig)
 {
+  (void) sig;
   rawmode ();                   // terminal to "raw"
   *status_buffer = '\0';        // clear the status buffer
   redraw (TRUE);                // re-draw the screen
@@ -3232,6 +3233,7 @@ static void cont_sig(int sig)
 //----- Come here when we get a Suspend signal -------------------
 static void suspend_sig(int sig)
 {
+  (void) sig;
   place_cursor (rows - 1, 0, FALSE);  // go to bottom of screen
   clear_to_eol ();              // Erase to end of line
   cookmode ();                  // terminal to "cooked"
