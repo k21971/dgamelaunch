@@ -7,13 +7,13 @@ index 157a22d..7e7c867 100644
  #include <stdlib.h>
  #include <string.h>
 +#include <stdint.h>
- 
+
  #include "ux_defines.h"
- 
+
 @@ -53,6 +54,110 @@ static char latin1_to_ascii[] =
  	"a  a  a  a  ae a  ae c  e  e  e  e  i  i  i  i  "
  	"th n  o  o  o  o  oe :  o  u  u  u  ue y  th y  ";
- 
+
 +/*
 + * Font 3 (character graphics) to Unicode mapping table.
 + * 95 entries for ZSCII positions 32-126.
@@ -63,28 +63,28 @@ index 157a22d..7e7c867 100644
 +    0x2581, /* 72: lower one-eighth block */
 +    0x2595, /* 73: right one-eighth block */
 +    0x258f, /* 74: left one-eighth block */
-+    0x2595, /* 75: right one-eighth (thin bar) */
-+    0x258f, /* 76: left one-eighth (thin bar) */
-+    0x2594, /* 77: upper one-eighth (thin bar) */
-+    0x2581, /* 78: lower one-eighth (thin bar) */
-+    0x2591, /* 79: light shade */
-+    0x2592, /* 80: medium shade */
-+    0x2593, /* 81: dark shade */
-+    0x2588, /* 82: full block (dup) */
-+    0x2575, /* 83: light vertical upper */
-+    0x2577, /* 84: light vertical lower */
-+    0x2574, /* 85: light horizontal left */
-+    0x2576, /* 86: light horizontal right */
-+    0x2573, /* 87: diagonal cross */
-+    0x253c, /* 88: box cross */
-+    0x2191, /* 89: arrow up */
-+    0x2193, /* 90: arrow down */
-+    0x2195, /* 91: arrow up-down */
-+    0x23a1, /* 92: left square bracket upper */
-+    0x23a3, /* 93: left square bracket lower */
-+    0x23a4, /* 94: right square bracket upper */
-+    0x23a6, /* 95: right square bracket lower */
-+    0x0020, /* 96: space (blank) */
++    0x2594, /* 75: upper one-eighth block (top edge) */
++    0x2581, /* 76: lower one-eighth block (bottom edge) */
++    0x258f, /* 77: left one-eighth block (left edge) */
++    0x2595, /* 78: right one-eighth block (right edge) */
++    0x0020, /* 79: empty bar segment (space) */
++    0x258f, /* 80: bar 1/8 filled (left one-eighth block) */
++    0x258e, /* 81: bar 2/8 filled (left one-quarter block) */
++    0x258d, /* 82: bar 3/8 filled (left three-eighths block) */
++    0x258c, /* 83: bar 4/8 filled (left half block) */
++    0x258b, /* 84: bar 5/8 filled (left five-eighths block) */
++    0x258a, /* 85: bar 6/8 filled (left three-quarters block) */
++    0x2589, /* 86: bar 7/8 filled (left seven-eighths block) */
++    0x2588, /* 87: bar fully filled (full block) */
++    0x2595, /* 88: bar right border (right one-eighth block) */
++    0x258f, /* 89: bar left border (left one-eighth block) */
++    0x2573, /* 90: diagonal cross */
++    0x253c, /* 91: box cross */
++    0x2191, /* 92: arrow up */
++    0x2193, /* 93: arrow down */
++    0x2195, /* 94: arrow up-down */
++    0x2395, /* 95: APL quad */
++    0x003f, /* 96: question mark (unmapped) */
 +    0x16aa, /* 97:  runic letter ac */
 +    0x16d2, /* 98:  runic letter berkanan */
 +    0x16c7, /* 99:  runic letter iwaz */
@@ -95,13 +95,13 @@ index 157a22d..7e7c867 100644
 +    0x16bb, /* 104: runic letter haegl */
 +    0x16c1, /* 105: runic letter isaz */
 +    0x16c4, /* 106: runic letter ger */
-+    0x16e3, /* 107: runic letter calc */
++    0x16e6, /* 107: runic letter yr */
 +    0x16da, /* 108: runic letter laukaz */
 +    0x16d7, /* 109: runic letter mannaz */
 +    0x16be, /* 110: runic letter naudiz */
 +    0x16a9, /* 111: runic letter os */
-+    0x16b1, /* 112: runic letter pertho */
-+    0x16e3, /* 113: runic letter calc (alt) */
++    0x15be, /* 112: runic letter pertho */
++    0x16b3, /* 113: runic letter cen */
 +    0x16b1, /* 114: runic letter raido */
 +    0x16cb, /* 115: runic letter sigel */
 +    0x16cf, /* 116: runic letter tiwaz */
@@ -110,15 +110,15 @@ index 157a22d..7e7c867 100644
 +    0x16b9, /* 119: runic letter wunjo */
 +    0x16c9, /* 120: runic letter x */
 +    0x16a5, /* 121: runic letter yr (wynn) */
-+    0x16c6, /* 122: runic letter sowilo */
++    0x16df, /* 122: runic letter othala */
 +    0x2191, /* 123: arrow up (reverse video) */
 +    0x2193, /* 124: arrow down (reverse video) */
 +    0x2195, /* 125: arrow up-down (reverse video) */
-+    0x23a5, /* 126: right square bracket extension */
++    0x003f, /* 126: question mark (unmapped) */
 +};
 +
 +static int current_font = TEXT_FONT;
- 
+
  /*
   * os_font_data
 @@ -71,15 +176,14 @@ static char latin1_to_ascii[] =
@@ -134,7 +134,7 @@ index 157a22d..7e7c867 100644
  	}
  	return 0;
  } /* os_font_data */
- 
+
 -
  #ifdef COLOR_SUPPORT
  /*
@@ -142,15 +142,15 @@ index 157a22d..7e7c867 100644
 @@ -103,7 +207,6 @@ static int unix_convert(int color)
  } /* unix_convert */
  #endif
- 
+
 -
  /*
   * os_set_colour
   *
 @@ -157,7 +260,6 @@ void os_set_colour (int new_foreground, int new_background)
- 
+
  } /* os_set_colour */
- 
+
 -
  /*
   * os_get_text_style
@@ -158,7 +158,7 @@ index 157a22d..7e7c867 100644
 @@ -216,7 +318,6 @@ void os_set_text_style (int new_style)
  	attrset(temp ^ u_setup.current_color);
  } /* os_set_text_style */
- 
+
 -
  /*
   * os_set_font
@@ -173,7 +173,7 @@ index 157a22d..7e7c867 100644
 -	/* Not implemented */
 +	current_font = new_font;
  } /* os_set_font */
- 
+
 -
  /*
   * os_display_char
@@ -203,7 +203,7 @@ index 157a22d..7e7c867 100644
 @@ -287,7 +402,6 @@ void os_display_char (zchar c)
  	}
  } /* os_display_char */
- 
+
 -
  /*
   * os_display_string
@@ -211,7 +211,7 @@ index 157a22d..7e7c867 100644
 @@ -310,7 +424,6 @@ void os_display_string (const zchar *s)
  	}
  } /* os_display_string */
- 
+
 -
  /*
   * os_check_unicode
@@ -219,7 +219,7 @@ index 157a22d..7e7c867 100644
 @@ -324,7 +437,6 @@ int os_check_unicode(int UNUSED(font), zchar UNUSED(c))
  	return 3;
  } /* os_check_unicode */
- 
+
 -
  /*
   * os_char_width
@@ -227,7 +227,7 @@ index 157a22d..7e7c867 100644
 @@ -352,7 +464,6 @@ int os_char_width(zchar c)
  	return 1;
  } /* os_char_width*/
- 
+
 -
  /*
   * os_string_width
@@ -235,7 +235,7 @@ index 157a22d..7e7c867 100644
 @@ -378,7 +489,6 @@ int os_string_width(const zchar *s)
  	return width;
  } /* os_string_width */
- 
+
 -
  /*
   * os_set_cursor
@@ -243,7 +243,7 @@ index 157a22d..7e7c867 100644
 @@ -391,7 +501,6 @@ void os_set_cursor(int y, int x)
  	move(--y, --x);
  } /* os_set_cursor */
- 
+
 -
  /*
   * os_more_prompt
