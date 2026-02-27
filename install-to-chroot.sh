@@ -66,6 +66,17 @@ for binary in ee virus; do
   fi
 done
 
+# Patched frotz with font 3 support (lives in bin/ subdirectory)
+FROTZ_PATH="$DGL_GIT/bin/frotz"
+if [ -e "$FROTZ_PATH" ]; then
+  echo "Copying frotz to $CHROOT_BIN/"
+  cp "$FROTZ_PATH" "$CHROOT_BIN/frotz"
+  chmod 755 "$CHROOT_BIN/frotz"
+  LIBS="$LIBS `findlibs $FROTZ_PATH`"
+else
+  echo "Warning: frotz not found at $FROTZ_PATH - skipping."
+fi
+
 LIBS=`for lib in $LIBS; do echo $lib; done | sort | uniq`
 echo "Copying libraries:" $LIBS
 for lib in $LIBS; do

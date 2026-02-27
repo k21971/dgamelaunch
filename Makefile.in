@@ -40,7 +40,7 @@ virus: virus.c
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
 clean:
-	rm -f $(NAME) nethackstub $(EDITORS)
+	rm -f $(NAME) nethackstub $(EDITORS) zork1-wrapper beyondzork-wrapper
 	rm -f *.o *~ y.tab.* lex.yy.c .depend .depend.bak
 
 distclean: clean

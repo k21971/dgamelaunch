@@ -121,8 +121,10 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
         ZORK_AVAILABLE=0
     fi
 
-    # Copy frotz to test environment
-    if command -v frotz >/dev/null 2>&1; then
+    # Copy frotz to test environment (prefer patched repo binary)
+    if [ -f "$SCRIPT_DIR/bin/frotz" ]; then
+        cp "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/"
+    elif command -v frotz >/dev/null 2>&1; then
         cp "$(which frotz)" "$TEST_DIR/bin/"
     else
         echo "Warning: frotz not found, Zork may not work"
@@ -155,7 +157,9 @@ if [ $BEYONDZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/beyondzork-wrapper.c" ];
 
     # Copy frotz to test environment (may already be there from Zork I)
     if [ ! -f "$TEST_DIR/bin/frotz" ]; then
-        if command -v frotz >/dev/null 2>&1; then
+        if [ -f "$SCRIPT_DIR/bin/frotz" ]; then
+            cp "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/"
+        elif command -v frotz >/dev/null 2>&1; then
             cp "$(which frotz)" "$TEST_DIR/bin/"
         else
             echo "Warning: frotz not found, Beyond Zork may not work"
