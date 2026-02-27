@@ -1,7 +1,7 @@
-# Adding Zork I to dgamelaunch
+# Adding Z-Machine Games to dgamelaunch
 
-This guide explains how to integrate Zork I (and other Z-machine games)
-into dgamelaunch.
+This guide explains how to integrate Zork I, Beyond Zork, and other
+Z-machine games into dgamelaunch.
 
 ## Overview
 
@@ -89,22 +89,22 @@ DEFINE {
     game_name = "Zork I: The Great Underground Empire"
     short_name = "zork1"
     game_id = "ZORK1"
-    
+
     # REQUIRED - dgamelaunch will segfault without this
     inprogressdir = "%rinprogress-zork1/"
-    
+
     max_idle_time = 3600
-    
+
     # User directory structure: /dgldir/userdata/{first_letter}/{username}/zork
     ttyrecdir = "%ruserdata/%N/%n/zork1/ttyrec/"
-    
+
     commands = mkdir "%ruserdata/%N/%n/zork1",
                mkdir "%ruserdata/%N/%n/zork1/ttyrec",
                setenv "DGL_USER" "%n",
                setenv "HOME" "%ruserdata/%N/%n/zork1"
-    
+
     encoding = "ascii"
-    
+
     # Optional: compress ttyrecs after game
     postcommands = exec "/bin/gzip" "%t"
 }
@@ -187,17 +187,75 @@ snprintf(zork_dat, sizeof(zork_dat), "/zork2/zork2.z3");
 - The wrapper runs with dropped privileges via dgamelaunch
 - Frotz displays with white text on blue background for nostalgia
 
+## Beyond Zork
+
+Beyond Zork: The Coconut of Quendor is a Z-machine version 5 game that
+combines interactive fiction with RPG elements. It features an on-screen
+map, character stats, color, and character graphics (font 3).
+
+### Quick Start
+
+1. Obtain the Beyond Zork data file (`z.z5`)
+   Source: https://github.com/historicalsource/beyondzork
+2. Compile the wrapper:
+   ```bash
+   gcc -g3 -O0 -Wall -o beyondzork-wrapper beyondzork-wrapper.c
+   ```
+3. Copy files to chroot:
+   ```bash
+   sudo cp beyondzork-wrapper /opt/nethack/chroot/bin/
+   sudo chmod 755 /opt/nethack/chroot/bin/beyondzork-wrapper
+   sudo mkdir -p /opt/nethack/chroot/beyondzork
+   sudo cp z.z5 /opt/nethack/chroot/beyondzork/
+   ```
+4. Add the Beyond Zork configuration to dgamelaunch.conf
+   (see examples/dgamelaunch-zork.conf)
+5. Create the inprogress directory:
+   ```bash
+   sudo mkdir -p /opt/nethack/chroot/dgldir/inprogress-beyondzork
+   ```
+
+### Display Notes
+
+Beyond Zork uses Z-machine features not present in Zork I:
+
+- **Colors**: Managed by the game via Z-machine opcodes. The wrapper uses
+  `-F` (force color mode) instead of Zork I's `-f white -b blue`.
+- **Character graphics**: Font 3 renders the on-screen map. Modern frotz
+  maps font 3 to Unicode box-drawing characters, so `encoding = "unicode"`
+  is used in the config instead of `"ascii"`.
+- **Interpreter number**: `-I 4` (Amiga) gives the best font 3 rendering.
+  Alternative: `-I 6` (IBM PC) for slightly different character choices.
+- **Terminal size**: Needs at least 80x24. dgamelaunch already enforces
+  a 40x15 minimum, so standard terminals work fine.
+- **VT200 mode**: Beyond Zork's original VT220 character set download
+  (DECDLD) is not available through ncurses-based frotz. The standard
+  font 3 approach provides map graphics and box-drawing via Unicode.
+
+### Frotz Flags Comparison
+
+| Flag | Zork I | Beyond Zork | Purpose |
+|------|--------|-------------|---------|
+| -q   | Yes    | Yes         | Quiet (no sound) |
+| -f   | white  | (omit)      | Foreground color |
+| -b   | blue   | (omit)      | Background color |
+| -F   | No     | Yes         | Force color mode |
+| -I   | (omit) | 4           | Interpreter number (Amiga) |
+| -l   | 1      | (omit)      | Left margin |
+| -r   | 1      | (omit)      | Right margin |
+| -R   | Yes    | Yes         | Restrict file I/O (security) |
+
 ## Technical Notes
 
 - The wrapper is written in C because most dgamelaunch chroots don't
   include a shell interpreter
 - The `%N` variable is the first character of the username (case-sensitive)
 - The `%n` variable is the full username
-- Always test outside dgamelaunch first: 
+- Always test outside dgamelaunch first:
   `sudo chroot /path/to/chroot /bin/zork1-wrapper`
 
 ## Credits
 
-- Zork I was created by Infocom
+- Zork I and Beyond Zork were created by Infocom
 - Frotz Z-machine interpreter by Stefan Jokisch and others
 - dgamelaunch C wrapper implementation for HDF (Hardfought)

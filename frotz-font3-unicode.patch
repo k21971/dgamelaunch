@@ -1,0 +1,250 @@
+diff --git a/src/curses/ux_text.c b/src/curses/ux_text.c
+index 157a22d..7e7c867 100644
+--- a/src/curses/ux_text.c
++++ b/src/curses/ux_text.c
+@@ -24,6 +24,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <stdint.h>
+ 
+ #include "ux_defines.h"
+ 
+@@ -53,6 +54,110 @@ static char latin1_to_ascii[] =
+ 	"a  a  a  a  ae a  ae c  e  e  e  e  i  i  i  i  "
+ 	"th n  o  o  o  o  oe :  o  u  u  u  ue y  th y  ";
+ 
++/*
++ * Font 3 (character graphics) to Unicode mapping table.
++ * 95 entries for ZSCII positions 32-126.
++ * Source: bocfel unicode.cpp:159-281 (townba/bocfel on GitHub).
++ */
++static const uint16_t font3_to_unicode[95] = {
++    0x0020, /* 32: space */
++    0x2190, /* 33: arrow left */
++    0x2192, /* 34: arrow right */
++    0x2571, /* 35: slash (diagonal) */
++    0x2572, /* 36: backslash (diagonal) */
++    0x0020, /* 37: space (blank) */
++    0x2500, /* 38: horizontal line */
++    0x2500, /* 39: horizontal line */
++    0x2502, /* 40: vertical line */
++    0x2502, /* 41: vertical line */
++    0x2534, /* 42: tee up */
++    0x252c, /* 43: tee down */
++    0x251c, /* 44: tee right */
++    0x2524, /* 45: tee left */
++    0x2514, /* 46: corner bottom-left */
++    0x250c, /* 47: corner top-left */
++    0x2510, /* 48: corner top-right */
++    0x2518, /* 49: corner bottom-right */
++    0x2514, /* 50: diagonal corner approx BL */
++    0x250c, /* 51: diagonal corner approx TL */
++    0x2510, /* 52: diagonal corner approx TR */
++    0x2518, /* 53: diagonal corner approx BR */
++    0x2588, /* 54: full block */
++    0x2580, /* 55: upper half block */
++    0x2584, /* 56: lower half block */
++    0x258c, /* 57: left half block */
++    0x2590, /* 58: right half block */
++    0x2584, /* 59: lower half (dup) */
++    0x2580, /* 60: upper half (dup) */
++    0x258c, /* 61: left half (dup) */
++    0x2590, /* 62: right half (dup) */
++    0x259d, /* 63: quadrant upper right */
++    0x2597, /* 64: quadrant lower right */
++    0x2596, /* 65: quadrant lower left */
++    0x2598, /* 66: quadrant upper left */
++    0x259d, /* 67: quadrant UR (alt) */
++    0x2597, /* 68: quadrant LR (alt) */
++    0x2596, /* 69: quadrant LL (alt) */
++    0x2598, /* 70: quadrant UL (alt) */
++    0x2594, /* 71: upper one-eighth block */
++    0x2581, /* 72: lower one-eighth block */
++    0x2595, /* 73: right one-eighth block */
++    0x258f, /* 74: left one-eighth block */
++    0x2595, /* 75: right one-eighth (thin bar) */
++    0x258f, /* 76: left one-eighth (thin bar) */
++    0x2594, /* 77: upper one-eighth (thin bar) */
++    0x2581, /* 78: lower one-eighth (thin bar) */
++    0x2591, /* 79: light shade */
++    0x2592, /* 80: medium shade */
++    0x2593, /* 81: dark shade */
++    0x2588, /* 82: full block (dup) */
++    0x2575, /* 83: light vertical upper */
++    0x2577, /* 84: light vertical lower */
++    0x2574, /* 85: light horizontal left */
++    0x2576, /* 86: light horizontal right */
++    0x2573, /* 87: diagonal cross */
++    0x253c, /* 88: box cross */
++    0x2191, /* 89: arrow up */
++    0x2193, /* 90: arrow down */
++    0x2195, /* 91: arrow up-down */
++    0x23a1, /* 92: left square bracket upper */
++    0x23a3, /* 93: left square bracket lower */
++    0x23a4, /* 94: right square bracket upper */
++    0x23a6, /* 95: right square bracket lower */
++    0x0020, /* 96: space (blank) */
++    0x16aa, /* 97:  runic letter ac */
++    0x16d2, /* 98:  runic letter berkanan */
++    0x16c7, /* 99:  runic letter iwaz */
++    0x16de, /* 100: runic letter dagaz */
++    0x16d6, /* 101: runic letter ehwaz */
++    0x16a0, /* 102: runic letter fehu */
++    0x16b7, /* 103: runic letter gebo */
++    0x16bb, /* 104: runic letter haegl */
++    0x16c1, /* 105: runic letter isaz */
++    0x16c4, /* 106: runic letter ger */
++    0x16e3, /* 107: runic letter calc */
++    0x16da, /* 108: runic letter laukaz */
++    0x16d7, /* 109: runic letter mannaz */
++    0x16be, /* 110: runic letter naudiz */
++    0x16a9, /* 111: runic letter os */
++    0x16b1, /* 112: runic letter pertho */
++    0x16e3, /* 113: runic letter calc (alt) */
++    0x16b1, /* 114: runic letter raido */
++    0x16cb, /* 115: runic letter sigel */
++    0x16cf, /* 116: runic letter tiwaz */
++    0x16a2, /* 117: runic letter uruz */
++    0x16e0, /* 118: runic letter ear */
++    0x16b9, /* 119: runic letter wunjo */
++    0x16c9, /* 120: runic letter x */
++    0x16a5, /* 121: runic letter yr (wynn) */
++    0x16c6, /* 122: runic letter sowilo */
++    0x2191, /* 123: arrow up (reverse video) */
++    0x2193, /* 124: arrow down (reverse video) */
++    0x2195, /* 125: arrow up-down (reverse video) */
++    0x23a5, /* 126: right square bracket extension */
++};
++
++static int current_font = TEXT_FONT;
+ 
+ /*
+  * os_font_data
+@@ -71,15 +176,14 @@ static char latin1_to_ascii[] =
+  */
+ int os_font_data (int font, int *height, int *width)
+ {
+-	if (font == TEXT_FONT) {
++	if (font == TEXT_FONT || font == GRAPHICS_FONT) {
+ 		*height = 1;
+ 		*width = 1;
+-		return 1; /* Truth in advertising */
++		return 1;
+ 	}
+ 	return 0;
+ } /* os_font_data */
+ 
+-
+ #ifdef COLOR_SUPPORT
+ /*
+  * unix_convert
+@@ -103,7 +207,6 @@ static int unix_convert(int color)
+ } /* unix_convert */
+ #endif
+ 
+-
+ /*
+  * os_set_colour
+  *
+@@ -157,7 +260,6 @@ void os_set_colour (int new_foreground, int new_background)
+ 
+ } /* os_set_colour */
+ 
+-
+ /*
+  * os_get_text_style
+  *
+@@ -216,7 +318,6 @@ void os_set_text_style (int new_style)
+ 	attrset(temp ^ u_setup.current_color);
+ } /* os_set_text_style */
+ 
+-
+ /*
+  * os_set_font
+  *
+@@ -224,12 +325,11 @@ void os_set_text_style (int new_style)
+  * choose fonts which aren't supported by the interface.
+  *
+  */
+-void os_set_font (int UNUSED(new_font))
++void os_set_font (int new_font)
+ {
+-	/* Not implemented */
++	current_font = new_font;
+ } /* os_set_font */
+ 
+-
+ /*
+  * os_display_char
+  *
+@@ -243,6 +343,21 @@ void os_set_font (int UNUSED(new_font))
+  */
+ void os_display_char (zchar c)
+ {
++	if (current_font == GRAPHICS_FONT && c >= 32 && c <= 126) {
++		uint16_t uc = font3_to_unicode[c - 32];
++		/* Emit as UTF-8 (all code points are in BMP) */
++		if (uc < 0x80) {
++			addch(uc);
++		} else if (uc < 0x800) {
++			addch(0xc0 | (uc >> 6));
++			addch(0x80 | (uc & 0x3f));
++		} else {
++			addch(0xe0 | (uc >> 12));
++			addch(0x80 | ((uc >> 6) & 0x3f));
++			addch(0x80 | (uc & 0x3f));
++		}
++		return;
++	}
+ 	if (c >= ZC_LATIN1_MIN) {
+ 		if (u_setup.plain_ascii) {
+ 			char *ptr = latin1_to_ascii + 3 * (c - ZC_LATIN1_MIN);
+@@ -287,7 +402,6 @@ void os_display_char (zchar c)
+ 	}
+ } /* os_display_char */
+ 
+-
+ /*
+  * os_display_string
+  *
+@@ -310,7 +424,6 @@ void os_display_string (const zchar *s)
+ 	}
+ } /* os_display_string */
+ 
+-
+ /*
+  * os_check_unicode
+  *
+@@ -324,7 +437,6 @@ int os_check_unicode(int UNUSED(font), zchar UNUSED(c))
+ 	return 3;
+ } /* os_check_unicode */
+ 
+-
+ /*
+  * os_char_width
+  *
+@@ -352,7 +464,6 @@ int os_char_width(zchar c)
+ 	return 1;
+ } /* os_char_width*/
+ 
+-
+ /*
+  * os_string_width
+  *
+@@ -378,7 +489,6 @@ int os_string_width(const zchar *s)
+ 	return width;
+ } /* os_string_width */
+ 
+-
+ /*
+  * os_set_cursor
+  *
+@@ -391,7 +501,6 @@ void os_set_cursor(int y, int x)
+ 	move(--y, --x);
+ } /* os_set_cursor */
+ 
+-
+ /*
+  * os_more_prompt
+  *

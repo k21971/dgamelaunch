@@ -72,11 +72,27 @@ elif [ $ZORK_AVAILABLE -eq 0 ]; then
     echo "NOTE: No Zork data file found - Zork will not be available"
 fi
 
+# Check for Beyond Zork support
+BEYONDZORK_AVAILABLE=0
+BEYONDZORK_SOURCE=""
+if [ -f "/home/build/beyondzork/COMPILED/z.z5" ]; then
+    BEYONDZORK_SOURCE="/home/build/beyondzork/COMPILED/z.z5"
+    BEYONDZORK_AVAILABLE=1
+    echo "Beyond Zork support detected"
+fi
+
+if [ $BEYONDZORK_AVAILABLE -eq 1 ] && ! (command -v dfrotz >/dev/null 2>&1 || command -v frotz >/dev/null 2>&1); then
+    BEYONDZORK_AVAILABLE=0
+    echo "NOTE: frotz/dfrotz not installed - Beyond Zork will not be available"
+elif [ $BEYONDZORK_AVAILABLE -eq 0 ]; then
+    echo "NOTE: No Beyond Zork data file found - Beyond Zork will not be available"
+fi
+
 # Create directory structure if needed
 if [ ! -d "$TEST_DIR" ]; then
     echo "Creating test environment..."
     mkdir -p "$TEST_DIR"/{dgldir,userdata,inprogress,ttyrec,rcfiles,var/mail,bin}
-    mkdir -p "$TEST_DIR"/inprogress-{nh36,zork1}
+    mkdir -p "$TEST_DIR"/inprogress-{nh36,zork1,beyondzork}
     mkdir -p "$TEST_DIR"/ttyrec-zork
 else
     echo "Using existing test environment..."
@@ -117,6 +133,40 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
     if [ -n "$ZORK_SOURCE" ]; then
         mkdir -p "$TEST_DIR/$ZORK_PATH"
         cp "$ZORK_SOURCE" "$TEST_DIR/$ZORK_PATH/Zork1.dat"
+    fi
+fi
+
+# Compile and copy Beyond Zork wrapper if available
+if [ $BEYONDZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/beyondzork-wrapper.c" ]; then
+    echo "Compiling Beyond Zork wrapper..."
+    # Create a temporary version with test paths
+    sed -e "s|/beyondzork/z.z5|$TEST_DIR/beyondzork/z.z5|g" \
+        -e "s|/dgldir/userdata|$TEST_DIR/userdata|g" \
+        -e "s|/bin/frotz|$TEST_DIR/bin/frotz|g" \
+        "$SCRIPT_DIR/beyondzork-wrapper.c" > "$TEST_DIR/beyondzork-wrapper-test.c"
+    gcc -O2 -Wall -o "$TEST_DIR/bin/beyondzork-wrapper" "$TEST_DIR/beyondzork-wrapper-test.c"
+    if [ $? -eq 0 ]; then
+        chmod +x "$TEST_DIR/bin/beyondzork-wrapper"
+        rm "$TEST_DIR/beyondzork-wrapper-test.c"
+    else
+        echo "Warning: Failed to compile Beyond Zork wrapper"
+        BEYONDZORK_AVAILABLE=0
+    fi
+
+    # Copy frotz to test environment (may already be there from Zork I)
+    if [ ! -f "$TEST_DIR/bin/frotz" ]; then
+        if command -v frotz >/dev/null 2>&1; then
+            cp "$(which frotz)" "$TEST_DIR/bin/"
+        else
+            echo "Warning: frotz not found, Beyond Zork may not work"
+            BEYONDZORK_AVAILABLE=0
+        fi
+    fi
+
+    # Copy Beyond Zork data file to test environment
+    if [ -n "$BEYONDZORK_SOURCE" ]; then
+        mkdir -p "$TEST_DIR/beyondzork"
+        cp "$BEYONDZORK_SOURCE" "$TEST_DIR/beyondzork/z.z5"
     fi
 fi
 
@@ -225,13 +275,15 @@ commands[register] = mkdir "$TEST_DIR/userdata/%N",
                      mkdir "$TEST_DIR/userdata/%N/%n",
                      mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
                      mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
-                     mkdir "$TEST_DIR/userdata/%N/%n/zork1"
+                     mkdir "$TEST_DIR/userdata/%N/%n/zork1",
+                     mkdir "$TEST_DIR/userdata/%N/%n/beyondzork"
 
 commands[login] = mkdir "$TEST_DIR/userdata/%N",
                   mkdir "$TEST_DIR/userdata/%N/%n",
                   mkdir "$TEST_DIR/userdata/%N/%n/ttyrec",
                   mkdir "$TEST_DIR/userdata/%N/%n/ttyrec-zork",
                   mkdir "$TEST_DIR/userdata/%N/%n/zork1",
+                  mkdir "$TEST_DIR/userdata/%N/%n/beyondzork",
                   setenv "HOME" "$TEST_DIR/dgldir"
 
 filemode = "0666"
@@ -296,6 +348,32 @@ DEFINE {
 EOF
 fi
 
+# Add Beyond Zork definition only if available
+if [ $BEYONDZORK_AVAILABLE -eq 1 ]; then
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
+
+# Beyond Zork definition
+DEFINE {
+  game_id = "BZORK"
+  game_name = "Beyond Zork: The Coconut of Quendor"
+  game_path = "$TEST_DIR/bin/beyondzork-wrapper"
+  short_name = "BZork"
+  game_args = "$TEST_DIR/bin/beyondzork-wrapper"
+  inprogressdir = "$TEST_DIR/inprogress-beyondzork/"
+  ttyrecdir = "$TEST_DIR/userdata/%N/%n/beyondzork/ttyrec/"
+  savefile = "$TEST_DIR/userdata/%N/%n/beyondzork/*"
+  max_idle_time = 3600
+  encoding = "unicode"
+
+  # Commands before game starts
+  commands = mkdir "$TEST_DIR/userdata/%N/%n/beyondzork",
+             mkdir "$TEST_DIR/userdata/%N/%n/beyondzork/ttyrec",
+             setenv "DGL_USER" "%n",
+             setenv "HOME" "$TEST_DIR/userdata/%N/%n/beyondzork"
+}
+EOF
+fi
+
 # Continue with menus
 cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
 
@@ -319,6 +397,13 @@ EOF
 if [ $ZORK_AVAILABLE -eq 1 ]; then
 cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
   commands["z"] = play_game "ZORK1"
+EOF
+fi
+
+# Add Beyond Zork menu option if available
+if [ $BEYONDZORK_AVAILABLE -eq 1 ]; then
+cat >> "$TEST_DIR/dgamelaunch.conf" << EOF
+  commands["b"] = play_game "BZORK"
 EOF
 fi
 
@@ -351,14 +436,17 @@ q) Quit
 
 EOF
 
-# Create user banner based on available games
-if [ $ZORK_AVAILABLE -eq 1 ]; then
-cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
+# Create user banner based on available games (dynamic)
+{
+cat << 'BANNER_HEAD'
 === DGamelaunch Test Server ===              $DATETIME
 Logged in as: $USERNAME
 
 p) Play NetHack 3.6.7
-z) Play Zork I
+BANNER_HEAD
+[ $ZORK_AVAILABLE -eq 1 ] && echo "z) Play Zork I"
+[ $BEYONDZORK_AVAILABLE -eq 1 ] && echo "b) Play Beyond Zork"
+cat << 'BANNER_TAIL'
 P) Play last game ($LASTGAME)
 R) Resume saved game ($LASTSAVE)
 w) Watch games
@@ -368,24 +456,8 @@ e) Edit RC file (ee)
 v) Edit RC file (virus)
 q) Quit
 
-EOF
-else
-cat > "$TEST_DIR/dgl-banner-user" << 'EOF'
-=== DGamelaunch Test Server ===              $DATETIME
-Logged in as: $USERNAME
-
-p) Play NetHack 3.6.7
-P) Play last game ($LASTGAME)
-R) Resume saved game ($LASTSAVE)
-w) Watch games
-c) Change password
-m) Change email
-e) Edit RC file (ee)
-v) Edit RC file (virus)
-q) Quit
-
-EOF
-fi
+BANNER_TAIL
+} > "$TEST_DIR/dgl-banner-user"
 
 cat > "$TEST_DIR/dgl-banner-watch" << 'EOF'
 === Watch Menu ===
@@ -437,6 +509,9 @@ echo "Games available:"
 echo "  - NetHack 3.6.7"
 if [ $ZORK_AVAILABLE -eq 1 ]; then
     echo "  - Zork I"
+fi
+if [ $BEYONDZORK_AVAILABLE -eq 1 ]; then
+    echo "  - Beyond Zork"
 fi
 echo ""
 echo "=== Launching dgamelaunch ==="
