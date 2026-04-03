@@ -52,6 +52,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <ctype.h>
 
 #include <termios.h>
 #include <time.h>
@@ -72,6 +73,7 @@
 # define XCASE 0
 #endif
 static void query_encoding(int game, char *username);
+static void game_idle_kill(int signal);
 
 int slave;
 pid_t dgl_parent;
@@ -130,7 +132,7 @@ ttyrec_id(int game, char *username, char *ttyrec_filename)
 }
 
 int
-ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
+ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename, int wants_lisp)
 {
   char dirname[100];
 
@@ -153,13 +155,18 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
       return 0;
   }
 
+  if (wants_lisp) strcpy(strstr(ttyrec_filename, ".ttyrec"), ".lisprec");
+
   if (ttyrec_path[strlen(ttyrec_path)-1] == '/')
       snprintf (dirname, 100, "%s%s", ttyrec_path, ttyrec_filename);
   else
       snprintf (dirname, 100, "%s/%s", ttyrec_path, ttyrec_filename);
-  ancient_encoding = myconfig[game]->encoding;
-  if (ancient_encoding == -1)
-      query_encoding(game, username);
+
+  if (!wants_lisp) {
+      ancient_encoding = myconfig[game]->encoding;
+      if (ancient_encoding == -1)
+          query_encoding(game, username);
+  }
 
   snprintf(last_ttyrec, 512, "%s", dirname);
 
@@ -171,7 +178,7 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
     }
   setbuf (fscript, NULL);
 
-  fixtty ();
+  if (!wants_lisp) fixtty ();
 
   (void) signal (SIGCHLD, finish);
   child = fork ();
@@ -192,15 +199,63 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
         {
           close (slave);
           ipfile = gen_inprogress_lock (game, child, ttyrec_filename);
+          if (wants_lisp) {
+              char obuf[2048], stripped_obuf[2048];
+              setbuf(stdout, NULL);
+              close(0);
+
+              signal(SIGALRM, game_idle_kill);
+              for (;;) {
+                  fd_set rfd;
+                  FD_ZERO(&rfd);
+                  if (master >= 0) {
+                      FD_SET(master, &rfd);
+                  } else break;
+
+                  if (myconfig[game]->max_idle_time)
+                      alarm(myconfig[game]->max_idle_time);
+
+                  if (select(master + 1, &rfd, NULL, NULL, NULL) < 0) break;
+                  if (master < 0 || !FD_ISSET(master, &rfd)) continue;
+                  int cc = read (master, obuf, 2048);
+                  if (cc <= 0) break;
+                  write(1, obuf, cc);
+
+                  char *start = obuf, *end = obuf + cc, *dst = stripped_obuf;
+                  char *match;
+                  while ((match = memmem(start, end - start, "> ", 2))) {
+                      char *line_start;
+                      for (line_start = match; line_start > start && *(line_start - 1) != '\n'; line_start--)
+                          if (isspace(*line_start) || *line_start == '(') {
+                              line_start = match + 2;
+                              break;
+                          }
+                      memcpy(dst, start, line_start - start);
+                      dst += line_start - start;
+                      start = (*(line_start - 1) != '\n') ? line_start : memchr(line_start, '\n', end - line_start);
+                      if (start) start += 1;
+                      if (!start || start > end) start = end;
+                  }
+                  memcpy(dst, start, end - start);
+                  dst += end - start;
+                  fwrite(stripped_obuf, 1, dst - stripped_obuf, fscript);
+              }
+              done();
+          } else {
 	  ttyrec_id(game, username, ttyrec_filename);
           dooutput (myconfig[game]->max_idle_time);
+          }
         }
       else
-	  doshell (game, username);
+	  doshell (game, username, wants_lisp);
     }
 
   (void) fclose (fscript);
 
+  if (wants_lisp) {
+	  int status;
+	  wait(&status);
+  } else {
   wait_for_menu = 1;
   input_child = fork();
   if (input_child < 0)
@@ -218,6 +273,7 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
 
   remove_ipfile();
   child = 0;
+  }
 
   return 0;
 }
@@ -486,14 +542,14 @@ dooutput (int max_idle_time)
 }
 
 void
-doshell (int game, char *username)
+doshell (int game, char *username, int wants_lisp)
 {
   (void)game; /* unused */
   (void)username; /* unused */
-  getslave ();
+  if (!wants_lisp) getslave ();
   (void) close (master);
   (void) fclose (fscript);
-  (void) dup2 (slave, 0);
+  if (!wants_lisp) (void) dup2 (slave, 0);
   (void) dup2 (slave, 1);
   (void) dup2 (slave, 2);
   (void) close (slave);
