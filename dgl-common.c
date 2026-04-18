@@ -406,6 +406,29 @@ find_newest_save(struct dg_user *me)
     return best;
 }
 
+static struct dg_cmdpart *
+find_menu_cmdqueue_for_game(const char *game_id)
+{
+    struct dg_menulist *ml;
+
+    if (!game_id) return NULL;
+
+    for (ml = globalconfig.menulist; ml; ml = ml->next) {
+	struct dg_menuoption *opt;
+	if (!ml->menu) continue;
+	for (opt = ml->menu->options; opt; opt = opt->next) {
+	    struct dg_cmdpart *c;
+	    for (c = opt->cmdqueue; c; c = c->next) {
+		if ((c->cmd == DGLCMD_PLAYGAME ||
+		     c->cmd == DGLCMD_PLAY_IF_EXIST) &&
+		    c->param1 && !strcmp(c->param1, game_id))
+		    return opt->cmdqueue;
+	    }
+	}
+    }
+    return NULL;
+}
+
 char *
 read_last_game(struct dg_user *me)
 {
@@ -753,18 +776,41 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_PLAY_LAST:
 	    if (loggedin && me && !played) {
+		static int play_last_depth = 0;
 		char *lastgame_id = read_last_game(me);
-		if (lastgame_id) {
-		    if (play_game_by_id(lastgame_id, me))
-			played = 1;
-		    free(lastgame_id);
-		} else {
+		if (!lastgame_id) {
 		    clear();
 		    mvaddstr(5, 1, "No last game recorded.");
 		    mvaddstr(7, 1, "[Press any key]");
 		    refresh();
 		    dgl_getch();
+		    break;
 		}
+		if (play_last_depth >= 2) {
+		    free(lastgame_id);
+		    break;
+		}
+		play_last_depth++;
+		{
+		    struct dg_cmdpart *chain =
+			find_menu_cmdqueue_for_game(lastgame_id);
+		    int did_play = 0;
+		    if (chain && chain != queue)
+			did_play = dgl_exec_cmdqueue_w(chain, game, me, NULL);
+		    if (!did_play)
+			did_play = play_game_by_id(lastgame_id, me);
+		    if (did_play) {
+			played = 1;
+		    } else {
+			clear();
+			mvaddstr(5, 1, "Last game is no longer available.");
+			mvaddstr(7, 1, "[Press any key]");
+			refresh();
+			dgl_getch();
+		    }
+		}
+		play_last_depth--;
+		free(lastgame_id);
 	    }
 	    break;
 	case DGLCMD_RESUME_LAST:
@@ -788,7 +834,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
         if (p2) free(p2);
         if (p3) free(p3);
     }
-    return 0;
+    return played;
 }
 
 int
