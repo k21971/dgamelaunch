@@ -31,10 +31,12 @@
 # define CLR_NORMAL  COLOR_PAIR(11)   | A_NORMAL
 # define CLR_RED     COLOR_PAIR(COLOR_RED)   | A_NORMAL
 # define CLR_GREEN   COLOR_PAIR(COLOR_GREEN) | A_NORMAL
+# define CLR_MAGENTA COLOR_PAIR(COLOR_MAGENTA) | A_NORMAL
 #else
 # define CLR_NORMAL  0
 # define CLR_RED     0
 # define CLR_GREEN   0
+# define CLR_MAGENTA  0
 #endif
 extern int color_remap[256];
 
