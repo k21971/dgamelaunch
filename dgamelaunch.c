@@ -3407,6 +3407,26 @@ main (int argc, char** argv)
   struct rlimit lim;
 #endif
 
+  /* Set our own umask rather than inheriting one.
+   *
+   * dgl asks for explicit modes when it creates things (dgl-common.c's
+   * mkdir(p1, 0755) for userdata dirs, ttyrec.c's mkdir(..., 0755)), but the
+   * mode that actually lands is masked by whatever umask our parent happened
+   * to have. dgl is spawned from several unrelated places -- sshd/PAM, the
+   * websocket-terminal service, the telnet socket unit -- each with its own
+   * umask, so the permissions of a user's dgldir were effectively ambient.
+   *
+   * A restrictive parent umask (~077) yields mode 0700 user directories that
+   * the web server cannot traverse, silently 404ing that player's dumplogs,
+   * rcfile and ttyrecs. These paths are meant to be world-readable: they are
+   * served by the website and read back by other tooling.
+   *
+   * 022 gives the 0755 dirs / 0644 files the code already asks for. This is
+   * the long-standing "FIXIT- use the correct umask()" note in virus.c.
+   */
+  umask (022);
+
+
 #ifndef HAVE_SETPROCTITLE
   /* save argc, argv */
   char** saved_argv;
