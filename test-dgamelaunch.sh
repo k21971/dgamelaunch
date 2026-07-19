@@ -16,6 +16,20 @@ NETHACK_PATH="${NETHACK_PATH:-/usr/games/lib/official36_nethackdir}"
 ZORK_PATH="/usr/games/lib/zork1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Atomically install an executable. Copying directly onto a live binary fails
+# with ETXTBSY ("Text file busy") if any process is currently executing it --
+# re-running this script while a previous test session still has the editor or
+# frotz open would otherwise abort the whole run. Copy to a temp name in the
+# same directory, then rename(2) over the target: the swap is atomic, and any
+# process still running the old binary keeps its inode until it exits.
+install_binary()
+{
+    local src="$1" dest="$2" tmp="$2.new.$$"
+    cp "$src" "$tmp"
+    chmod 755 "$tmp"
+    mv -f "$tmp" "$dest"
+}
+
 # Determine user to drop privileges to
 if [ "$(id -u)" -eq 0 ]; then
     # If running as root, use the 'build' user (1001)
@@ -100,9 +114,9 @@ fi
 
 # Copy binaries
 echo "Updating binaries..."
-cp "$SCRIPT_DIR/dgamelaunch" "$TEST_DIR/"
-cp "$SCRIPT_DIR/ee" "$TEST_DIR/bin/"
-cp "$SCRIPT_DIR/virus" "$TEST_DIR/bin/"
+install_binary "$SCRIPT_DIR/dgamelaunch" "$TEST_DIR/dgamelaunch"
+install_binary "$SCRIPT_DIR/ee" "$TEST_DIR/bin/ee"
+install_binary "$SCRIPT_DIR/virus" "$TEST_DIR/bin/virus"
 
 # Compile and copy Zork wrapper if available
 if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
@@ -123,9 +137,9 @@ if [ $ZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/zork1-wrapper.c" ]; then
 
     # Copy frotz to test environment (prefer patched repo binary)
     if [ -f "$SCRIPT_DIR/bin/frotz" ]; then
-        cp "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/"
+        install_binary "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/frotz"
     elif command -v frotz >/dev/null 2>&1; then
-        cp "$(which frotz)" "$TEST_DIR/bin/"
+        install_binary "$(which frotz)" "$TEST_DIR/bin/frotz"
     else
         echo "Warning: frotz not found, Zork may not work"
         ZORK_AVAILABLE=0
@@ -158,9 +172,9 @@ if [ $BEYONDZORK_AVAILABLE -eq 1 ] && [ -f "$SCRIPT_DIR/beyondzork-wrapper.c" ];
     # Copy frotz to test environment (may already be there from Zork I)
     if [ ! -f "$TEST_DIR/bin/frotz" ]; then
         if [ -f "$SCRIPT_DIR/bin/frotz" ]; then
-            cp "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/"
+            install_binary "$SCRIPT_DIR/bin/frotz" "$TEST_DIR/bin/frotz"
         elif command -v frotz >/dev/null 2>&1; then
-            cp "$(which frotz)" "$TEST_DIR/bin/"
+            install_binary "$(which frotz)" "$TEST_DIR/bin/frotz"
         else
             echo "Warning: frotz not found, Beyond Zork may not work"
             BEYONDZORK_AVAILABLE=0
