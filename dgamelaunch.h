@@ -89,6 +89,7 @@ typedef enum
     DGLCMD_IF_NX_SLEEP, /* ifnxsleep "time" "file" */
     DGLCMD_IF_NX_PL_SLEEP, /* ifnxplslp "time" "file" "plname" */
     DGLCMD_IF_NX_IP_SLEEP, /* ifnxipslp "time" "file" "ipaddr" */
+    DGLCMD_CHMOD,	/* chmod "mode" "file" */
 } dglcmd_actions;
 
 typedef enum

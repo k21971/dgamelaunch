@@ -604,6 +604,63 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		chmod (p2, default_fmode);
 	    }
 	    break;
+	case DGLCMD_CHMOD:
+	    if (p1 && p2) {
+		struct stat sb;
+		unsigned long newmode;
+		const char *digit;
+		char errbuf[512];
+
+		/* Require a bare octal string. strtoul() on its own would
+		 * accept leading whitespace and a '-' sign and wrap the
+		 * result, so "-1" - or a fat-fingered "66666" - would mask
+		 * down into a mode with the setuid/setgid bits set.
+		 */
+		for (digit = p1; *digit >= '0' && *digit <= '7'; digit++)
+		    ;
+		errno = 0;
+		newmode = strtoul(p1, NULL, 8);
+		if (digit == p1 || *digit != '\0' || errno == ERANGE ||
+		    newmode > 07777) {
+		    snprintf(errbuf, sizeof(errbuf),
+			     "chmod-command: bad mode '%s'", p1);
+		    debug_write(errbuf);
+		    break;
+		}
+
+		/* chmod() follows symlinks and these targets sit in
+		 * player-writable directories. This is hygiene rather than
+		 * a security boundary - chmod() only succeeds on files the
+		 * shed uid already owns, so it does not stop a hard link -
+		 * but it keeps a stray symlink from redirecting the mode
+		 * change. Directories are refused as well: 0666 on one
+		 * strips the traversal bit, which is the failure mode that
+		 * commit 50c5932 was about.
+		 */
+		if (lstat(p2, &sb) == -1) {
+		    /* a target that was never created is the normal case,
+		     * not an error worth logging on every game exit
+		     */
+		    if (errno != ENOENT) {
+			snprintf(errbuf, sizeof(errbuf),
+				 "chmod-command: cannot stat '%s'", p2);
+			debug_write(errbuf);
+		    }
+		    break;
+		}
+		if (!S_ISREG(sb.st_mode)) {
+		    snprintf(errbuf, sizeof(errbuf),
+			     "chmod-command: not a regular file '%s'", p2);
+		    debug_write(errbuf);
+		    break;
+		}
+		if (chmod(p2, (mode_t) newmode) == -1) {
+		    snprintf(errbuf, sizeof(errbuf),
+			     "chmod-command failed on '%s'", p2);
+		    debug_write(errbuf);
+		}
+	    }
+	    break;
 	case DGLCMD_EXEC:
 	    if (p1 && p2) {
                 /* split the un-formatted p2 value on whitespace and pass it
