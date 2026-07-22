@@ -138,6 +138,38 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
   dgl_parent = getpid();
   child = subchild = input_child = 0;
 
+  /* Refresh the terminal size before handing the pty to the game.
+   *
+   * main() probes TIOCGWINSZ once, very early, and falls back to 24x80 when the
+   * probe fails or reports something under 15x40 (dgamelaunch.c). Under telnet
+   * that probe runs too soon: telnetd execs the login program immediately on
+   * connect and the client's NAWS (RFC 1073) window size arrives afterwards, so
+   * dgl starts up believing every telnet session is 24x80. ssh and the
+   * websocket terminal both size the pty before exec'ing dgl and are unaffected.
+   *
+   * That stale size is what ttyrec_getpty() stamped on the game's pty, and the
+   * game inherits it for its whole run -- a telnet player on a 144x45 terminal
+   * gets an 80x24 game. By the time a game is launched the player has been
+   * through the menu, so NAWS has long since arrived and fd 0 is authoritative.
+   *
+   * Re-reading here (rather than in doshell(), which already refreshes win via
+   * getslave() but does so after the fork and never applies it) also fixes the
+   * size recorded by gen_inprogress_lock(), which is what the watch menu's
+   * "Size" column and ttyplay's resize use to render a spectated game.
+   *
+   * The 15x40 floor mirrors main()'s, so a degenerate size is never installed.
+   */
+  {
+    struct winsize w;
+
+    if (ioctl (0, TIOCGWINSZ, (char *) &w) == 0 &&
+        w.ws_row >= 15 && w.ws_col >= 40)
+      {
+        win = w;
+        (void) ioctl (slave, TIOCSWINSZ, (char *) &win);
+      }
+  }
+
   if (!ttyrec_path) {
       child = fork();
       if (child < 0) {
