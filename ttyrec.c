@@ -81,6 +81,10 @@ char* ipfile = NULL;
 
 volatile int wait_for_menu = 0;
 
+/* Set by the parent's SIGWINCH handler during a game; drained in the wait loop
+   below to relay a mid-game terminal resize onto the game's pty. */
+static volatile sig_atomic_t game_winch = 0;
+
 FILE *fscript;
 int master;
 
@@ -127,6 +131,16 @@ ttyrec_id(int game, char *username, char *ttyrec_filename)
     (void) fwrite(buf, 1, h.len, fscript);
 
     free(buf);
+}
+
+/* Parent-side SIGWINCH handler, installed only while a game is running.  Sets a
+   flag drained by the wait loop; the actual ioctls happen there, not here. */
+static void
+game_winch_handler (int sig)
+{
+  (void) sig;
+  game_winch = 1;
+  signal (SIGWINCH, game_winch_handler);   /* re-arm (matches sigwinch_func) */
 }
 
 int
@@ -244,8 +258,27 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
       doinput ();
   else
   {
+      /* Relay a mid-game terminal resize onto the game's pty.  Installed only
+         here in the parent, after the input_child fork, so doinput()'s read(0)
+         loop keeps SIGWINCH at SIG_DFL and is never interrupted.  The parent
+         stays in the login tty's foreground process group (only the game
+         setsid()'d away) so it receives the resize, and it still holds fd 0 and
+         slave.  With the game's controlling terminal set in getslave(), the
+         TIOCSWINSZ below makes the kernel deliver SIGWINCH to the game. */
+      signal (SIGWINCH, game_winch_handler);
       while (wait_for_menu)
+      {
+	  if (game_winch)
+	  {
+	      struct winsize w;
+	      game_winch = 0;			/* clear before the read */
+	      if (ioctl (0, TIOCGWINSZ, (char *) &w) == 0 &&
+		  w.ws_row >= 15 && w.ws_col >= 40)
+		  (void) ioctl (slave, TIOCSWINSZ, (char *) &w);
+	  }
 	  sleep(1);
+      }
+      signal (SIGWINCH, SIG_DFL);
   }
 
   remove_ipfile();
@@ -593,6 +626,30 @@ void
 getslave ()
 {
   (void) setsid ();
+#ifdef TIOCSCTTY
+  /* Adopt the game pty as our controlling terminal (login_tty semantics), so a
+     mid-game TIOCSWINSZ from the parent delivers SIGWINCH to the game.  setsid()
+     above dropped any prior ctty and made us a session leader, so this can only
+     bind the slave, which is no other session's controlling terminal. */
+  (void) ioctl (slave, TIOCSCTTY, 0);
+
+  /* Now that the game has a controlling terminal, disable signal generation on
+     the slave for the window before the game installs its own termios.  The
+     slave inherited the login tty's cooked settings (ISIG on), so without this a
+     ^C/^\ typed at startup would SIGINT/SIGQUIT (terminate/core) the game -- which
+     could not happen before it had a ctty.  (^Z/SIGTSTP is moot: the game's
+     post-setsid() process group is orphaned, so the kernel discards stop signals
+     to it.)  Matches fixtty()'s clearing of ISIG on the login side; the game
+     resets termios once it starts. */
+  {
+    struct termios gtt;
+    if (tcgetattr (slave, &gtt) == 0)
+      {
+	gtt.c_lflag &= ~ISIG;
+	(void) tcsetattr (slave, TCSANOW, &gtt);
+      }
+  }
+#endif
   /* grantpt( master);
      unlockpt(master);
      if ((slave = open((const char *)ptsname(master), O_RDWR)) < 0) {
