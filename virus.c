@@ -3582,8 +3582,12 @@ static int file_write(Byte * fn, Byte * first, Byte * last)
       return (-1);
   }
   charcnt = 0;
-  // FIXIT- use the correct umask()
-  fd = open ((char *) fn, (O_WRONLY | O_CREAT | O_TRUNC), 0664);
+  /* O_TRUNC keeps an existing file's mode, so this only applies when the
+   * file is created. 0664 was the one creation site in the tree that could
+   * never yield other-write; 0666 matches ee.c and dgamelaunch's
+   * default_fmode, and umask (022 since 50c5932) narrows it from there.
+   */
+  fd = open ((char *) fn, (O_WRONLY | O_CREAT | O_TRUNC), 0666);
   if (fd < 0)
     return (-1);
   cnt = last - first + 1;
