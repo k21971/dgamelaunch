@@ -533,6 +533,46 @@ play_game_by_id(const char *game_id, struct dg_user *me)
     return 0;
 }
 
+/* Set the mode of one path on behalf of DGLCMD_CHMOD.
+ *
+ * chmod() follows symlinks and these targets sit in player-writable
+ * directories. This is hygiene rather than a security boundary - chmod()
+ * only succeeds on files the shed uid already owns, so it does not stop a
+ * hard link - but it keeps a stray symlink from redirecting the mode
+ * change. Directories are refused as well: 0666 on one strips the traversal
+ * bit, which is the failure mode that commit 50c5932 was about. That guard
+ * matters more now that a single command can sweep a whole player directory.
+ */
+static void
+dgl_chmod_path(const char *path, mode_t mode)
+{
+    struct stat sb;
+    char errbuf[512];
+
+    if (lstat(path, &sb) == -1) {
+	/* a target that was never created is the normal case, not an error
+	 * worth logging on every game exit
+	 */
+	if (errno != ENOENT) {
+	    snprintf(errbuf, sizeof(errbuf),
+		     "chmod-command: cannot stat '%s'", path);
+	    debug_write(errbuf);
+	}
+	return;
+    }
+    if (!S_ISREG(sb.st_mode)) {
+	snprintf(errbuf, sizeof(errbuf),
+		 "chmod-command: not a regular file '%s'", path);
+	debug_write(errbuf);
+	return;
+    }
+    if (chmod(path, mode) == -1) {
+	snprintf(errbuf, sizeof(errbuf),
+		 "chmod-command failed on '%s'", path);
+	debug_write(errbuf);
+    }
+}
+
 int
 dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char *playername)
 {
@@ -606,7 +646,6 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_CHMOD:
 	    if (p1 && p2) {
-		struct stat sb;
 		unsigned long newmode;
 		const char *digit;
 		char errbuf[512];
@@ -628,36 +667,35 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 		    break;
 		}
 
-		/* chmod() follows symlinks and these targets sit in
-		 * player-writable directories. This is hygiene rather than
-		 * a security boundary - chmod() only succeeds on files the
-		 * shed uid already owns, so it does not stop a hard link -
-		 * but it keeps a stray symlink from redirecting the mode
-		 * change. Directories are refused as well: 0666 on one
-		 * strips the traversal bit, which is the failure mode that
-		 * commit 50c5932 was about.
+		/* A glob pattern repairs every match, so one line in the
+		 * global gamestart/gameend queues can cover every variant's
+		 * rc file at once instead of one line per variant. A literal
+		 * path takes the same single-file route it always has,
+		 * including the quiet ENOENT, so existing configs are
+		 * unaffected. Usernames are validated isalnum-only, so an
+		 * expanded %n/%N can never introduce a metacharacter.
 		 */
-		if (lstat(p2, &sb) == -1) {
-		    /* a target that was never created is the normal case,
-		     * not an error worth logging on every game exit
-		     */
-		    if (errno != ENOENT) {
+		if (p2[strcspn(p2, "*?[")] != '\0') {
+		    glob_t gl;
+		    int globret = glob(p2, GLOB_NOSORT, NULL, &gl);
+
+		    if (globret == 0) {
+			size_t gi;
+
+			for (gi = 0; gi < gl.gl_pathc; gi++)
+			    dgl_chmod_path(gl.gl_pathv[gi], (mode_t) newmode);
+			globfree(&gl);
+		    } else if (globret != GLOB_NOMATCH) {
+			/* matching nothing is the normal case for a player
+			 * who has never launched that variant; anything else
+			 * is a real failure
+			 */
 			snprintf(errbuf, sizeof(errbuf),
-				 "chmod-command: cannot stat '%s'", p2);
+				 "chmod-command: glob failed on '%s'", p2);
 			debug_write(errbuf);
 		    }
-		    break;
-		}
-		if (!S_ISREG(sb.st_mode)) {
-		    snprintf(errbuf, sizeof(errbuf),
-			     "chmod-command: not a regular file '%s'", p2);
-		    debug_write(errbuf);
-		    break;
-		}
-		if (chmod(p2, (mode_t) newmode) == -1) {
-		    snprintf(errbuf, sizeof(errbuf),
-			     "chmod-command failed on '%s'", p2);
-		    debug_write(errbuf);
+		} else {
+		    dgl_chmod_path(p2, (mode_t) newmode);
 		}
 	    }
 	    break;
