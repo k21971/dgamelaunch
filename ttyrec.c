@@ -143,6 +143,33 @@ game_winch_handler (int sig)
   signal (SIGWINCH, game_winch_handler);   /* re-arm (matches sigwinch_func) */
 }
 
+/* Upper bound on the window size we will install on a game's pty.
+ *
+ * ws_row/ws_col are unsigned short and, over telnet, are simply whatever the
+ * client's NAWS (RFC 1073) claims -- anything up to 65535, changeable at will
+ * mid-game.  The games behind us are not all robust to absurd sizes: NetHack
+ * keeps its display dimensions in shorts, so a width above 32767 wraps
+ * negative and turns into an out-of-bounds write.  That is fixed in nh500 as
+ * of 2026-08-16, but nh367 is still playable and did not get the fix, so this
+ * clamp is the only thing protecting those games.
+ *
+ * Clamp rather than reject: the existing 15x40 floor drops an out-of-range
+ * size on the floor, which is right for a degenerate terminal but would bounce
+ * an unusually wide one back to the 80x24 default.  A wide terminal should
+ * still get a wide game, just not an absurd one.
+ */
+#define DGL_MAX_WS_ROW 512
+#define DGL_MAX_WS_COL 512
+
+static void
+clamp_winsize (struct winsize *w)
+{
+  if (w->ws_row > DGL_MAX_WS_ROW)
+    w->ws_row = DGL_MAX_WS_ROW;
+  if (w->ws_col > DGL_MAX_WS_COL)
+    w->ws_col = DGL_MAX_WS_COL;
+}
+
 int
 ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
 {
@@ -179,6 +206,7 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
     if (ioctl (0, TIOCGWINSZ, (char *) &w) == 0 &&
         w.ws_row >= 15 && w.ws_col >= 40)
       {
+        clamp_winsize (&w);
         win = w;
         (void) ioctl (slave, TIOCSWINSZ, (char *) &win);
       }
@@ -274,7 +302,10 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
 	      game_winch = 0;			/* clear before the read */
 	      if (ioctl (0, TIOCGWINSZ, (char *) &w) == 0 &&
 		  w.ws_row >= 15 && w.ws_col >= 40)
+		{
+		  clamp_winsize (&w);
 		  (void) ioctl (slave, TIOCSWINSZ, (char *) &w);
+		}
 	  }
 	  sleep(1);
       }
