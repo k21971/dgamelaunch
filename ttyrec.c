@@ -158,10 +158,7 @@ game_winch_handler (int sig)
  * an unusually wide one back to the 80x24 default.  A wide terminal should
  * still get a wide game, just not an absurd one.
  */
-#define DGL_MAX_WS_ROW 512
-#define DGL_MAX_WS_COL 512
-
-static void
+void
 clamp_winsize (struct winsize *w)
 {
   if (w->ws_row > DGL_MAX_WS_ROW)

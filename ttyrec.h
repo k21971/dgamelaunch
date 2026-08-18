@@ -28,5 +28,12 @@ extern int master, slave;
 extern struct termios tt;
 extern struct winsize win;
 
+/* Upper bound on any window size we install on a game's pty; see
+   clamp_winsize() in ttyrec.c for why it exists. */
+#define DGL_MAX_WS_ROW 512
+#define DGL_MAX_WS_COL 512
+
+extern void clamp_winsize (struct winsize *w);
+
 extern int encoding_by_name(const char *enc);
 #endif

@@ -3555,6 +3555,13 @@ main (int argc, char** argv)
       win.ws_ypixel = win.ws_row * 8;
     }
 
+  /* Bound the size the same way ttyrec.c does before installing one on a game's
+     pty.  This probe is the only writer of win, and ttyrec_getpty() below stamps
+     it straight onto the game's pty -- a stamp ttyrec_main() only re-does when
+     its own probe succeeds and clears the 15x40 floor.  Clamping here means the
+     global is never absurd for any reader, including gen_inprogress_lock(). */
+  clamp_winsize (&win);
+
   /* get master tty just before chroot (lives in /dev) */
   ttyrec_getpty ();
 

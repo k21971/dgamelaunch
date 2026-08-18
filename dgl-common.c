@@ -1260,6 +1260,14 @@ populate_games (int xgame, int *l, struct dg_user *me)
 		  games[len]->ws_row = 24;
 		  games[len]->ws_col = 80;
 	      }
+	      /* Cap what a lock file can claim: a pre-clamp binary may have
+		 written one for a game still running across the upgrade, and
+		 ttyplay echoes these back at a watcher's terminal as an
+		 \033[8;rows;colst resize when they press 'r'. */
+	      if (games[len]->ws_row > DGL_MAX_WS_ROW)
+		  games[len]->ws_row = DGL_MAX_WS_ROW;
+	      if (games[len]->ws_col > DGL_MAX_WS_COL)
+		  games[len]->ws_col = DGL_MAX_WS_COL;
 
               games[len]->extra_info = NULL;
               games[len]->extra_info_weight = 0;
