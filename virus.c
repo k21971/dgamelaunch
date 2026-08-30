@@ -279,7 +279,6 @@ static void colon (Byte *);     // execute the "colon" mode cmds
 static Byte *get_input_line (Byte *); // get input line- use "status line"
 #ifdef BB_FEATURE_VI_USE_SIGNALS
 static void winch_sig (int);    // catch window size changes
-static void suspend_sig (int);  // catch ctrl-Z
 static void alarm_sig (int);    // catch alarm time-outs
 static void catch_sig (int);    // catch ctrl-C
 static void core_sig (int);     // catch a core dump signal
@@ -1742,8 +1741,11 @@ static void colon(Byte * buf)
   // get any ARGuments
   while (isblnk (*buf))
     buf++;
-  /* FIXED strcpy((char *) args, (char *) buf); */
-  if (strlcpy((char *) args, (char *) buf, sizeof((char *)args)) > sizeof((char *)args)) err(1, "strlcpy overflow in function colon");
+  // NB: sizeof(args), not sizeof((char *)args) -- the cast made this 8.
+  if (strlcpy((char *) args, (char *) buf, sizeof (args)) >= sizeof (args)) {
+      psbs ("command line too long");
+      goto vc1;
+  }
   buf1 = (Byte *)last_char_is((char *)cmd, '!');
   if (buf1) {
       useforce = TRUE;
@@ -2272,6 +2274,15 @@ static void sync_cursor(Byte * d, int *row, int *col)
   if (d == beg_cur && *d == '\t') {
       offset = 0;
   }
+  // format_line() only ever fills MAX_SCR_COLS bytes, and refresh() indexes
+  // that buffer as buf[col + offset]; a text line longer than MAX_SCR_COLS
+  // would otherwise walk "offset" straight off the end of it.
+  if (offset > MAX_SCR_COLS - columns) {
+      offset = MAX_SCR_COLS - columns;
+  }
+  if (offset < 0) {
+      offset = 0;
+  }
   co -= offset;
 
   *row = ro;
@@ -2306,8 +2317,8 @@ static Byte *dollar_line(Byte * p)          // return pointer to just before NL 
 static Byte *prev_line(Byte * p)            // return pointer first char prev line
 {
   p = begin_line (p);           // goto begining of cur line
-  if (p[-1] == '\n' && p > text)
-    p--;                        // step to prev line
+  if (p > text && p[-1] == '\n')  // bounds check FIRST: p[-1] is off the
+    p--;                        // front of text[] when dot is on line 1
   p = begin_line (p);           // goto begining of prev line
   return (p);
 }
@@ -3005,7 +3016,7 @@ static void print_literal(Byte * buf, Byte * s)  // copy s to buf, convert unpri
           c = *s - 128;
       }
       if (*s < ' ') {
-          strcat ((char *) buf, "^");
+          strlcat ((char *) buf, "^", BUFSIZ);  /* caller's buf is BUFSIZ */
           c += '@';
       }
       b[0] = c;
@@ -3013,7 +3024,7 @@ static void print_literal(Byte * buf, Byte * s)  // copy s to buf, convert unpri
       if (*s > '~')
 	  strlcat((char *) buf, SOn, BUFSIZ); /* FIXED strlcat BUFSIZ */
       if (*s == '\n') {
-          strcat ((char *) buf, "$");
+          strlcat ((char *) buf, "$", BUFSIZ);
       }
   }
 }
@@ -3199,6 +3210,13 @@ static void window_size_get(int sig)
   if (winsize.ws_col <= 1) {
       winsize.ws_col = 80;
   }
+  // format_line()/refresh() work in MAX_SCR_COLS-byte line buffers, so
+  // "columns" must stay inside one.  dgamelaunch already clamps the pty to
+  // DGL_MAX_WS_COL (ttyrec.h), but don't depend on a constant in another
+  // file for memory safety -- ws_col is an unsigned short the client picks.
+  if (winsize.ws_col > MAX_SCR_COLS - 1) {
+      winsize.ws_col = MAX_SCR_COLS - 1;
+  }
   rows = (int) winsize.ws_row;
   columns = (int) winsize.ws_col;
 }
@@ -3217,31 +3235,11 @@ static void winch_sig(int sig)
   redraw (TRUE);                // re-draw the screen
 }
 
-//----- Come here when we get a continue signal -------------------
-static void cont_sig(int sig)
-{
-  (void) sig;
-  rawmode ();                   // terminal to "raw"
-  *status_buffer = '\0';        // clear the status buffer
-  redraw (TRUE);                // re-draw the screen
-
-  signal (SIGTSTP, suspend_sig);
-  signal (SIGCONT, SIG_DFL);
-  kill (getpid (), SIGCONT);
-}
-
-//----- Come here when we get a Suspend signal -------------------
-static void suspend_sig(int sig)
-{
-  (void) sig;
-  place_cursor (rows - 1, 0, FALSE);  // go to bottom of screen
-  clear_to_eol ();              // Erase to end of line
-  cookmode ();                  // terminal to "cooked"
-
-  signal (SIGCONT, cont_sig);
-  signal (SIGTSTP, SIG_DFL);
-  kill (getpid (), SIGTSTP);
-}
+// NOTE: there are deliberately no SIGTSTP/SIGCONT handlers.  dgamelaunch
+// runs this editor with no job control (edit_file() sets SIGTSTP to SIG_IGN
+// and do_cmd() swallows ctrl-Z); busybox vi's suspend_sig()/cont_sig() pair
+// was removed because cont_sig() re-armed SIGTSTP, so reinstating either one
+// silently restores suspend.
 
 //----- Come here when we get a signal ---------------------------
 static void catch_sig(int sig)
@@ -3376,7 +3374,9 @@ static Byte readit(void)                   // read (maybe cursor) key from stdin
   // keep reading while there are input chars and room in buffer
   while (select(1, &rfds, NULL, NULL, &tv) > 0 && bufsiz <= (BUFSIZ - 5)) {
       // read the rest of the ESC string
-      i = read (0, (void *) (readbuffer + bufsiz), BUFSIZ - bufsiz);
+      // leave room for the NUL: reading BUFSIZ-bufsiz bytes lets bufsiz
+      // reach BUFSIZ, and readbuffer[BUFSIZ] is off the end.
+      i = read (0, (void *) (readbuffer + bufsiz), BUFSIZ - bufsiz - 1);
       if (i > 0) {
           bufsiz += i;
           readbuffer[bufsiz] = '\0';  // Terminate the string
@@ -3468,7 +3468,8 @@ static Byte *get_input_line(Byte * prompt)  // get input line- use "status line"
   clear_to_eol ();              // clear the line
   WRITE_TERM(1, prompt, strlen ((char *) prompt));  // write out the :, /, or ? prompt
 
-  for (i = strlen ((char *) buf); i < BUFSIZ;) {
+  // the body writes buf[i+1], so stop one short of the last element
+  for (i = strlen ((char *) buf); i < (int) sizeof (buf) - 1;) {
       c = get_one_char ();      // read user input
       if (c == '\n' || c == '\r' || c == 27)
         break;                  // is this end of input
@@ -3765,13 +3766,17 @@ static void show_status_line(void)
 static void psbs(const char *format, ...)
 {
   va_list args;
+  size_t len, room;
 
   va_start (args, format);
-  /* FIXED strcpy((char *) status_buffer, SOs); */
   strlcpy((char *) status_buffer, SOs, BUFSIZ_STATBUF);   // Terminal standout mode on
-  vsprintf ((char *) status_buffer + strlen ((char *) status_buffer), format,
-            args);
-  /* FIXED strcat((char *) status_buffer, SOn); */
+  // status_buffer is BUFSIZ_STATBUF bytes and the format args are user input
+  // (an unknown ":" command is echoed back through ni()), so this MUST be
+  // bounded.  Reserve room for the SOn that gets appended below, or a long
+  // message would leave the terminal stuck in standout mode.
+  len = strlen ((char *) status_buffer);
+  room = BUFSIZ_STATBUF - len - strlen (SOn);
+  vsnprintf ((char *) status_buffer + len, room, format, args);
   strlcat((char *) status_buffer, SOn, BUFSIZ_STATBUF);   // Terminal standout mode off
   va_end (args);
 
@@ -3784,7 +3789,7 @@ static void psb(const char *format, ...)
   va_list args;
 
   va_start (args, format);
-  vsprintf ((char *) status_buffer, format, args);
+  vsnprintf ((char *) status_buffer, BUFSIZ_STATBUF, format, args);
   va_end (args);
   return;
 }
@@ -3859,6 +3864,8 @@ static void format_line(Byte * dest, Byte * src, int li)
                   dest[co] = c;
 	      }
 	  } else {
+              if (co >= MAX_SCR_COLS - 1)
+                break;          // no room for both the '^' and the char
               dest[co++] = '^';
               c |= '@';         // make it visible
               c &= 0x7f;        // get rid of hi bit
