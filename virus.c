@@ -84,6 +84,7 @@ const char *vi_Version = "0.0.6+dgamelaunch " PACKAGE_VERSION;
 #include <errno.h>
 #include <err.h>
 #include <stdarg.h>
+#include <limits.h>
 
 /* Helper macro for terminal writes that we don't care about errors */
 #define WRITE_TERM(fd, buf, len) do { \
@@ -1203,10 +1204,14 @@ key_cmd_mode:
       } else if (strncasecmp((char *) p, "write", cnt) == 0 ||
 		 strncasecmp((char *) p, "wq", cnt) == 0) {
           cnt = file_write (cfn, text, end - 1);
-          file_modified = FALSE;
-          psb ("\"%s\" %dL, %dC", cfn, count_lines (text, end - 1), cnt);
-          if (p[1] == 'q') {
-              editing = 0;
+          if (cnt < 0) {
+              psbs ("\"%s\" WRITE FAILED - file left unchanged", cfn);
+            } else {
+              file_modified = FALSE;
+              psb ("\"%s\" %dL, %dC", cfn, count_lines (text, end - 1), cnt);
+              if (p[1] == 'q') {
+                  editing = 0;
+                }
             }
       } else if (strncasecmp((char *) p, "file", cnt) == 0) {
           edit_status ();       // show current file status
@@ -1390,6 +1395,10 @@ key_cmd_mode:
           cnt = file_write (cfn, text, end - 1);
           if (cnt == (end - 1 - text + 1)) {
               editing = 0;
+            } else {
+              // do NOT exit: the file is unchanged and the buffer is all the
+              // player has left.
+              psbs ("\"%s\" WRITE FAILED - file left unchanged", cfn);
             }
         } else {
           editing = 0;
@@ -2141,7 +2150,10 @@ static void colon(Byte * buf)
           // system(syscmd);
           forced = FALSE;
       }
-      psb ("\"%s\" %dL, %dC", fn, li, l);
+      if (l < 0)
+        psbs ("\"%s\" WRITE FAILED - file left unchanged", fn);
+      else
+        psb ("\"%s\" %dL, %dC", fn, li, l);
       if (q == text && r == end - 1 && l == ch)
         file_modified = FALSE;
       if (cmd[1] == 'q' && l == ch) {
@@ -3574,33 +3586,119 @@ fi0:
   return (cnt);
 }
 
+/* Write the buffer to a fresh temp file beside the target, then rename() it over
+ * the top.  The previous O_TRUNC + write() destroyed the old contents BEFORE it
+ * knew the new ones would fit: a full disk, a quota, an ENOSPC part-way through
+ * left the player's rcfile truncated, and the caller reported the loss as a
+ * successful `"file" 12L, 0C`.  rename() is atomic, so every failure path below
+ * leaves the file exactly as it was.
+ *
+ * Two changes of behaviour, both deliberate:
+ *   - the file gets a NEW INODE.  Anything holding the old one open (a running
+ *     game, a concurrent reader) keeps the bytes it opened instead of seeing a
+ *     half-written file.  That is the point, not a side effect.
+ *   - a symlink at `fn` is REPLACED rather than written through, which is what
+ *     O_NOFOLLOW would have bought on the old path.
+ *
+ * The installed mode is copied from the file being replaced, and that is
+ * load-bearing rather than tidiness: dgamelaunch chmods the rcfile 0666 at
+ * gamestart/gameend (commands[gamestart] in dgamelaunch.conf), and on
+ * nethack.alt.org that 0666 is the only reason the web config editor -- running
+ * as a different uid -- can save at all.  Creating the replacement at the umask
+ * default (0644) would silently break web saves until the player's next game.
+ *
+ * Returns the byte count written, or -1.  It is now all-or-nothing: a short
+ * write can no longer be reported as a partial success.
+ */
 static int file_write(Byte * fn, Byte * first, Byte * last)
 {
-  int fd, cnt, charcnt;
+  char tmpfn[PATH_MAX];
+  struct stat st;
+  size_t fnlen, cnt, off;
+  ssize_t nw;
+  mode_t mode, um;
+  char *slash;
+  int fd, dfd, saved_errno;
 
   if (fn == 0) {
       psbs ("No current filename");
       return (-1);
   }
-  charcnt = 0;
-  /* O_TRUNC keeps an existing file's mode, so this only applies when the
-   * file is created. 0664 was the one creation site in the tree that could
-   * never yield other-write; 0666 matches ee.c and dgamelaunch's
-   * default_fmode, and umask (022 since 50c5932) narrows it from there.
-   */
-  fd = open ((char *) fn, (O_WRONLY | O_CREAT | O_TRUNC), 0666);
+  if (last + 1 < first) {
+      psbs ("Nothing to write");
+      return (-1);
+  }
+  cnt = (size_t) (last - first + 1);
+
+  fnlen = strlen ((char *) fn);
+  if (fnlen == 0 || fnlen + sizeof (".XXXXXX") > sizeof (tmpfn)) {
+      psbs ("Filename too long to write safely");
+      return (-1);
+  }
+  memcpy (tmpfn, (char *) fn, fnlen);
+  memcpy (tmpfn + fnlen, ".XXXXXX", sizeof (".XXXXXX"));  // copies the NUL too
+
+  /* Mode for the replacement: the existing file's, else what open(...,0666)
+   * would have produced under our umask.  lstat(), so a symlink at `fn`
+   * contributes nothing -- we are about to replace it, not follow it. */
+  um = umask (0);
+  (void) umask (um);
+  mode = 0666 & ~um;
+  if (lstat ((char *) fn, &st) == 0 && S_ISREG (st.st_mode))
+    mode = st.st_mode & 07777;
+
+  fd = mkstemp (tmpfn);         // 0600 until the fchmod below
   if (fd < 0)
     return (-1);
-  cnt = last - first + 1;
-  charcnt = write (fd, first, cnt);
-  if (charcnt == cnt) {
-      // good write
-      //file_modified= FALSE; // the file has not been modified
-  } else {
-      charcnt = 0;
+  if (fchmod (fd, mode) < 0)
+    goto fail;
+
+  off = 0;
+  while (off < cnt) {
+      nw = write (fd, first + off, cnt - off);
+      if (nw < 0) {
+          if (errno == EINTR)
+            continue;
+          goto fail;
+      }
+      if (nw == 0)              // no progress; do not spin
+        goto fail;
+      off += (size_t) nw;
   }
-  close (fd);
-  return (charcnt);
+  /* fsync BEFORE the rename: a crash may then expose the old file or the new
+   * one, never a zero-length new one. */
+  if (fsync (fd) < 0)
+    goto fail;
+  if (close (fd) < 0) {         // quota / NFS errors can surface only here
+      fd = -1;
+      goto fail;
+  }
+  fd = -1;
+  if (rename (tmpfn, (char *) fn) < 0)
+    goto fail;
+
+  /* Make the rename itself durable.  Best effort: the bytes are already safe,
+   * and there is nothing useful to tell the player if this is all that fails. */
+  slash = strrchr (tmpfn, '/');
+  if (slash == NULL) {
+      dfd = open (".", O_RDONLY);
+  } else {
+      *slash = '\0';
+      dfd = open (tmpfn[0] != '\0' ? tmpfn : "/", O_RDONLY);
+  }
+  if (dfd >= 0) {
+      (void) fsync (dfd);
+      (void) close (dfd);
+  }
+  return ((int) cnt);
+
+fail:
+  saved_errno = errno;
+  if (fd >= 0)
+    (void) close (fd);
+  (void) unlink (tmpfn);        // never leave the temp behind on a failure
+  errno = saved_errno;
+  return (-1);
 }
 
 //----- Terminal Drawing ---------------------------------------
