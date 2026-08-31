@@ -1353,6 +1353,10 @@ game_get_column_data(struct dg_game *game,
             snprintf(data, bufsz, "  N/A");
             *hilite = CLR_GREEN;
             break;
+        } else if (game->extra_info && !strcmp(game->extra_info, "lisp")) {
+            snprintf(data, bufsz, "  lisp");
+            *hilite = CLR_MAGENTA;
+            break;
         }
         snprintf(data, bufsz, "%3dx%3d", game->ws_col, game->ws_row);
 	if (showplayers)
@@ -1741,6 +1745,42 @@ watchgame:
 		  setproctitle("%s [watching %s]", me->username, chosen_name);
 	      else
 		  setproctitle("<Anonymous> [watching %s]", chosen_name);
+          if (!strcmp(games[idx]->extra_info, "lisp")) {
+              int fd = open(ttyrecname, O_RDONLY);
+              char buf[4096];
+              for (;;) {
+                  fd_set rfds;
+                  FD_ZERO(&rfds);
+                  FD_SET(0, &rfds);
+                  FD_SET(fd, &rfds);
+
+                  if (!select(fd + 1, &rfds, NULL, NULL, &(struct timeval){1200, 0})) break;
+
+                  if (FD_ISSET(fd, &rfds)) {
+                      int cc = read(fd, buf, 4096);
+                      if (cc > 0) {
+                        write(1, buf, cc);
+                        idle_alarm_reset();
+                      }
+                  }
+                  if (FD_ISSET(0, &rfds)) {
+                      switch (dgl_getch()) {
+                      case EOF:
+                      case 'q':
+                          break;
+                      case 'm':
+                          if (!loggedin)
+                              loginprompt(1);
+                          if (loggedin)
+                              domailuser(chosen_name);
+                      default:
+                          continue;
+                      }
+                      break;
+                  }
+              }
+              close(fd);
+          } else {
               if (myconfig[games[idx]->gamenum]->watch_path) {
                   pid_t watch_child;
                   int gnum = games[idx]->gamenum;
@@ -1784,6 +1824,7 @@ watchgame:
               } else {
                   ttyplay_main (ttyrecname, 1, resizex, resizey);
               }
+          }
 	      if (loggedin)
 		  setproctitle("%s", me->username);
 	      else
