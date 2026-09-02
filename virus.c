@@ -3256,6 +3256,15 @@ static void winch_sig(int sig)
 //----- Come here when we get a signal ---------------------------
 static void catch_sig(int sig)
 {
+  if (sig == SIGHUP) {
+      // The terminal went away, or a supervisor asked us to leave (the
+      // dgamelaunch session units and nao-killrunaways both send SIGHUP
+      // first).  Restarting the editor onto a dead tty is what readit()'s
+      // spin used to follow from; unsaved edits die with the session, as
+      // they did under the SIGKILL that used to come 300 CPU-seconds later.
+      cookmode ();              // one tcsetattr(): async-signal-safe
+      _exit (1);
+  }
   signal (SIGHUP, catch_sig);
   signal (SIGINT, catch_sig);
   signal (SIGTERM, catch_sig);
@@ -3354,19 +3363,18 @@ static Byte readit(void)                   // read (maybe cursor) key from stdin
     ri0:
       // the Q is empty, wait for a typed char
       bufsiz = read (0, readbuffer, BUFSIZ - 1);
-      if (bufsiz < 0) {
-          if (errno == EINTR)
-            goto ri0;           // interrupted sys call
-          if (errno == EBADF)
-            editing = 0;
-          if (errno == EFAULT)
-            editing = 0;
-          if (errno == EINVAL)
-            editing = 0;
-          if (errno == EIO)
-            editing = 0;
-          errno = 0;
-          bufsiz = 0;
+      if (bufsiz < 0 && errno == EINTR)
+        goto ri0;               // interrupted sys call
+      if (bufsiz <= 0) {
+          // EOF, or a hung-up terminal.  Linux makes read() on a hung-up tty
+          // return 0 rather than -EIO, and the old code turned that into an
+          // endless stream of NUL "keystrokes": state R, 100% of the CPU,
+          // until something killed it (on NAO: nao-killrunaways, ~weekly,
+          // 5-10 min of a single vCPU each time).  The terminal is gone, so
+          // nothing can be read or drawn.  `editing = 0' is not enough here:
+          // get_input_line() loops on get_one_char() without checking it.
+          cookmode ();
+          exit (1);
       }
       readbuffer[bufsiz] = '\0';
   }
