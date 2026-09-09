@@ -406,27 +406,160 @@ find_newest_save(struct dg_user *me)
     return best;
 }
 
-static struct dg_cmdpart *
-find_menu_cmdqueue_for_game(const char *game_id)
+/* Index of the DEFINE whose game_id, game_name or shortname is `id`, or
+ * -1.  First match wins, as play_game has always done. */
+static int
+game_index_by_id(const char *id)
 {
-    struct dg_menulist *ml;
+    int i;
 
-    if (!game_id) return NULL;
+    if (!id) return -1;
+    for (i = 0; i < num_games; i++) {
+	if (!strcmp(myconfig[i]->game_id, id) ||
+	    !strcmp(myconfig[i]->game_name, id) ||
+	    !strcmp(myconfig[i]->shortname, id))
+	    return i;
+    }
+    return -1;
+}
 
-    for (ml = globalconfig.menulist; ml; ml = ml->next) {
+/* Show a one-line notice and wait for a keypress. */
+static void
+notice_wait(const char *msg)
+{
+    clear();
+    mvaddstr(5, 1, msg);
+    mvaddstr(7, 1, "[Press any key]");
+    refresh();
+    dgl_getch();
+}
+
+/* Does this menu option's play_game or play_if_exist resolve to game gi?
+ * The id is formatted the way dgl_exec_cmdqueue_w() formats it before
+ * playing, so ${pref} ids and DEFINEs sharing a name resolve exactly as
+ * they would on a key press. */
+static int
+option_offers_game(struct dg_menuoption *opt, int gi, int game,
+		   struct dg_user *me)
+{
+    struct dg_cmdpart *c;
+
+    for (c = opt->cmdqueue; c; c = c->next) {
+	char *id;
+	int found;
+
+	if ((c->cmd != DGLCMD_PLAYGAME && c->cmd != DGLCMD_PLAY_IF_EXIST) ||
+	    !c->param1)
+	    continue;
+	id = dgl_format_str(game, me, c->param1, NULL);
+	found = (game_index_by_id(id) == gi);
+	free(id);
+	if (found) return 1;
+    }
+    return 0;
+}
+
+/* Fill `menus` (capacity `max`) with the menus this player can reach: the
+ * main menu for the account type, then everything transitively reachable
+ * through `submenu`, breadth-first.  Returns the count.  Menus nothing
+ * leads to - the admin menu for a non-admin, dead config - are left out. */
+static int
+collect_reachable_menus(struct dg_menu **menus, int max, int game,
+			struct dg_user *me)
+{
+    struct dg_menu *m = dgl_find_menu(get_mainmenu_name());
+    int n = 0, i;
+
+    if (!m || max < 1) return 0;
+    menus[n++] = m;
+
+    for (i = 0; i < n; i++) {
 	struct dg_menuoption *opt;
-	if (!ml->menu) continue;
-	for (opt = ml->menu->options; opt; opt = opt->next) {
+	for (opt = menus[i]->options; opt; opt = opt->next) {
 	    struct dg_cmdpart *c;
 	    for (c = opt->cmdqueue; c; c = c->next) {
-		if ((c->cmd == DGLCMD_PLAYGAME ||
-		     c->cmd == DGLCMD_PLAY_IF_EXIST) &&
-		    c->param1 && !strcmp(c->param1, game_id))
-		    return opt->cmdqueue;
+		char *name;
+		int j;
+
+		if (c->cmd != DGLCMD_SUBMENU || !c->param1) continue;
+		name = dgl_format_str(game, me, c->param1, NULL);
+		m = name ? dgl_find_menu(name) : NULL;
+		free(name);
+		if (!m) continue;
+		for (j = 0; j < n; j++)
+		    if (menus[j] == m) break;
+		if (j == n && n < max)
+		    menus[n++] = m;
 	    }
 	}
     }
-    return NULL;
+    return n;
+}
+
+/* Launch game gi the way a menu key would.
+ *
+ * Every option in a menu this player can reach whose play_game or
+ * play_if_exist resolves to gi is replayed, in order, until one launches
+ * a game.  play_if_exist gates therefore apply exactly as they do on a
+ * key press, and a game no reachable menu offers cannot be launched at
+ * all.  There is deliberately no direct play_game_by_id() fallback: that
+ * was the hole that let play_last start a gated tournament build after
+ * the gate file had been removed.
+ *
+ * `queue` is the caller's own cmdqueue and is skipped - its remaining
+ * commands run once we return.  `game` is passed through unchanged so
+ * %g/%s in a gate path format as they would on the key press (menus run
+ * with selected_game, which is always 0).
+ *
+ * Returns 1 if a game was launched.  On 0, `refused_msg` is shown only
+ * from the outermost call and only if the caller's own queue was not the
+ * sole option offering the game: nested replays stay silent so prompts do
+ * not stack, and a chain such as `play_last, play_game "x"` falls through
+ * to its own play_game without a message. */
+static int
+play_game_via_menu(int gi, struct dg_cmdpart *queue, int game,
+		   struct dg_user *me, const char *refused_msg)
+{
+    static int depth = 0;
+    struct dg_menu **menus;
+    struct dg_menulist *ml;
+    int nmenus = 0, n, i;
+    int launched = 0, skipped_self = 0;
+
+    if (gi < 0 || gi >= num_games) return 0;
+    /* A replayed option may itself contain play_last or resume_last. */
+    if (depth >= 2) return 0;
+
+    for (ml = globalconfig.menulist; ml; ml = ml->next) nmenus++;
+    if (nmenus == 0) return 0;
+    menus = calloc(nmenus, sizeof(*menus));
+    if (!menus) return 0;
+
+    depth++;
+    n = collect_reachable_menus(menus, nmenus, game, me);
+    for (i = 0; i < n && !launched; i++) {
+	struct dg_menuoption *opt;
+	for (opt = menus[i]->options; opt && !launched; opt = opt->next) {
+	    if (!opt->cmdqueue || !option_offers_game(opt, gi, game, me))
+		continue;
+	    if (opt->cmdqueue == queue) {
+		skipped_self = 1;
+		continue;
+	    }
+	    launched = dgl_exec_cmdqueue_w(opt->cmdqueue, game, me, NULL);
+	    /* A `return` inside the replayed option must not pop the menu
+	     * the player is actually in.  dgl_exec_cmdqueue_w() cleared the
+	     * flag on entry, and it was 0 before that or the caller's loop
+	     * would not still be running. */
+	    return_from_submenu = 0;
+	}
+    }
+    depth--;
+    free(menus);
+
+    if (!launched && depth == 0 && !skipped_self && refused_msg)
+	notice_wait(refused_msg);
+    return launched;
 }
 
 char *
@@ -464,73 +597,69 @@ play_game_by_id(const char *game_id, struct dg_user *me)
     int userchoice, i;
     char *tmpstr;
 
-    for (userchoice = 0; userchoice < num_games; userchoice++) {
-	if (!strcmp(myconfig[userchoice]->game_id, game_id) ||
-	    !strcmp(myconfig[userchoice]->game_name, game_id) ||
-	    !strcmp(myconfig[userchoice]->shortname, game_id)) {
-	    if (purge_stale_locks(userchoice)) {
-		char *ttrecdir = NULL;
-		if (myconfig[userchoice]->rcfile) {
-		    char *rcname = NULL;
-		    if (access(rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
-			write_canned_rcfile(userchoice, rcname);
-		    if (rcname) free(rcname);
-		}
+    userchoice = game_index_by_id(game_id);
+    if (userchoice < 0) return 0;
 
-		setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
-
-		clear();
-		refresh();
-		endwin();
-
-		/* first run the generic "do these when a game is started" commands */
-		dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMESTART], userchoice, me);
-		/* then run the game-specific commands */
-		dgl_exec_cmdqueue(myconfig[userchoice]->cmdqueue, userchoice, me);
-
-		/* fix the variables in the arguments */
-		for (i = 0; i < myconfig[userchoice]->num_args; i++) {
-		    tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
-		    free(myconfig[userchoice]->bin_args[i]);
-		    myconfig[userchoice]->bin_args[i] = tmpstr;
-		}
-
-		signal(SIGWINCH, SIG_DFL);
-		signal(SIGINT, SIG_DFL);
-		signal(SIGQUIT, SIG_DFL);
-		signal(SIGTERM, SIG_DFL);
-		idle_alarm_set_enabled(0);
-
-		/* launch program */
-		ttyrec_main(userchoice, me->username,
-			    ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
-			    gen_ttyrec_filename());
-		idle_alarm_set_enabled(1);
-		if (ttrecdir) free(ttrecdir);
-		/* lastly, run the generic "do these when a game is left" commands */
-		signal(SIGHUP, catch_sighup);
-		signal(SIGINT, catch_sighup);
-		signal(SIGQUIT, catch_sighup);
-		signal(SIGTERM, catch_sighup);
-		signal(SIGWINCH, sigwinch_func);
-
-		dgl_exec_cmdqueue(myconfig[userchoice]->postcmdqueue, userchoice, me);
-
-		dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMEEND], userchoice, me);
-
-		/* save last game, update banner */
-		save_last_game(userchoice, me);
-		update_lastgame_banner(me);
-		redraw_banner = 1;
-
-		setproctitle("%s", me->username);
-		initcurses();
-		check_retard(1); /* reset retard counter */
+    if (purge_stale_locks(userchoice)) {
+	    char *ttrecdir = NULL;
+	    if (myconfig[userchoice]->rcfile) {
+		char *rcname = NULL;
+		if (access(rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
+		    write_canned_rcfile(userchoice, rcname);
+		if (rcname) free(rcname);
 	    }
-	    return 1;
-	}
+
+	    setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
+
+	    clear();
+	    refresh();
+	    endwin();
+
+	    /* first run the generic "do these when a game is started" commands */
+	    dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMESTART], userchoice, me);
+	    /* then run the game-specific commands */
+	    dgl_exec_cmdqueue(myconfig[userchoice]->cmdqueue, userchoice, me);
+
+	    /* fix the variables in the arguments */
+	    for (i = 0; i < myconfig[userchoice]->num_args; i++) {
+		tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
+		free(myconfig[userchoice]->bin_args[i]);
+		myconfig[userchoice]->bin_args[i] = tmpstr;
+	    }
+
+	    signal(SIGWINCH, SIG_DFL);
+	    signal(SIGINT, SIG_DFL);
+	    signal(SIGQUIT, SIG_DFL);
+	    signal(SIGTERM, SIG_DFL);
+	    idle_alarm_set_enabled(0);
+
+	    /* launch program */
+	    ttyrec_main(userchoice, me->username,
+			ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
+			gen_ttyrec_filename());
+	    idle_alarm_set_enabled(1);
+	    if (ttrecdir) free(ttrecdir);
+	    /* lastly, run the generic "do these when a game is left" commands */
+	    signal(SIGHUP, catch_sighup);
+	    signal(SIGINT, catch_sighup);
+	    signal(SIGQUIT, catch_sighup);
+	    signal(SIGTERM, catch_sighup);
+	    signal(SIGWINCH, sigwinch_func);
+
+	    dgl_exec_cmdqueue(myconfig[userchoice]->postcmdqueue, userchoice, me);
+
+	    dgl_exec_cmdqueue(globalconfig.cmdqueue[DGLTIME_GAMEEND], userchoice, me);
+
+	    /* save last game, update banner */
+	    save_last_game(userchoice, me);
+	    update_lastgame_banner(me);
+	    redraw_banner = 1;
+
+	    setproctitle("%s", me->username);
+	    initcurses();
+	    check_retard(1); /* reset retard counter */
     }
-    return 0;
+    return 1;
 }
 
 /* Set the mode of one path on behalf of DGLCMD_CHMOD.
@@ -871,56 +1000,38 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
 	    break;
 	case DGLCMD_PLAY_LAST:
 	    if (loggedin && me && !played) {
-		static int play_last_depth = 0;
 		char *lastgame_id = read_last_game(me);
+		int gi;
+
 		if (!lastgame_id) {
-		    clear();
-		    mvaddstr(5, 1, "No last game recorded.");
-		    mvaddstr(7, 1, "[Press any key]");
-		    refresh();
-		    dgl_getch();
+		    notice_wait("No last game recorded.");
 		    break;
 		}
-		if (play_last_depth >= 2) {
-		    free(lastgame_id);
-		    break;
-		}
-		play_last_depth++;
-		{
-		    struct dg_cmdpart *chain =
-			find_menu_cmdqueue_for_game(lastgame_id);
-		    int did_play = 0;
-		    if (chain && chain != queue)
-			did_play = dgl_exec_cmdqueue_w(chain, game, me, NULL);
-		    if (!did_play)
-			did_play = play_game_by_id(lastgame_id, me);
-		    if (did_play) {
-			played = 1;
-		    } else {
-			clear();
-			mvaddstr(5, 1, "Last game is no longer available.");
-			mvaddstr(7, 1, "[Press any key]");
-			refresh();
-			dgl_getch();
-		    }
-		}
-		play_last_depth--;
+		gi = game_index_by_id(lastgame_id);
 		free(lastgame_id);
+		if (gi < 0) {
+		    /* lastgame names a game the config no longer defines */
+		    notice_wait("Last game is no longer available.");
+		    break;
+		}
+		/* Replay the menu option(s) that offer it - never a direct
+		 * launch, so a play_if_exist gate cannot be bypassed. */
+		if (play_game_via_menu(gi, queue, game, me,
+				       "Last game is not available right now."))
+		    played = 1;
 	    }
 	    break;
 	case DGLCMD_RESUME_LAST:
 	    if (loggedin && me && !played) {
 		int gi = find_newest_save(me);
-		if (gi >= 0) {
-		    if (play_game_by_id(myconfig[gi]->game_id, me))
-			played = 1;
-		} else {
-		    clear();
-		    mvaddstr(5, 1, "No saved game to resume.");
-		    mvaddstr(7, 1, "[Press any key]");
-		    refresh();
-		    dgl_getch();
+
+		if (gi < 0) {
+		    notice_wait("No saved game to resume.");
+		    break;
 		}
+		if (play_game_via_menu(gi, queue, game, me,
+				       "Saved game cannot be resumed right now."))
+		    played = 1;
 	    }
 	    break;
 	}
